@@ -1,0 +1,54 @@
+# Local environment and secrets
+.env
+.env.*
+*.local
+*.secret
+*secret*
+*token*
+*key*
+
+# Legacy local config with credentials or machine-specific values
+legacy/config/*.env
+legacy/config/*.vars
+!legacy/config/*.env.example
+!legacy/config/*.vars.example
+
+# Runtime and generated data
+/cache/
+/data/
+/runtime/
+/tmp/
+/logs/
+examples/runtime/state/
+*.log
+*.pid
+*.lock
+*.stamp
+*.tmp
+
+# Generated cache/provider output
+*.json.tmp
+current.json
+forecast.json
+normalized.json
+extended.json
+status.json
+snapshot.json
+events_cache.txt
+seasonal.vars
+owm_forecast.json
+
+# Local tool/editor state
+.codex
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Lua/Python bytecode
+*.luac
+__pycache__/
+*.py[cod]

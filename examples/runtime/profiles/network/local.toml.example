@@ -1,0 +1,13 @@
+profile_id = "local"
+enabled = true
+primary_interface = "eno1"
+
+[labels]
+lan = "LAN IP"
+dns = "DNS"
+subnet = "SUBNET"
+gateway = "GATEWAY"
+
+[vlan]
+labels = ["GATEWAY", "HOME", "IOT", "GUEST", "CAM"]
+hosts = ["192.168.10.1", "192.168.10.50", "192.168.20.1", "192.168.30.1", "192.168.50.1"]

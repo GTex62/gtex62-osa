@@ -1,0 +1,10 @@
+# pfSense interface map + cache settings for the Nexus Array scaffold
+PFSENSE_CACHE_TTL=1
+PFSENSE_CACHE_JSON=$CONKY_CACHE_DIR/pfsense_current.json
+
+PFSENSE_IF_WAN=igc0
+PFSENSE_IF_HOME=igc1.10
+PFSENSE_IF_IOT=igc1.20
+PFSENSE_IF_GUEST=igc1.30
+PFSENSE_IF_INFRA=igc1.40
+PFSENSE_IF_CAM=igc1.50

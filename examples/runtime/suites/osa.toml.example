@@ -1,0 +1,37 @@
+suite_id = "osa"
+name = "gtex62-osa"
+suite_repo = "__SUITE_REPO__"
+suite_manifest = "__SUITE_REPO__/suite.toml"
+enabled = true
+
+[profiles]
+weather = "home"
+air = "home"
+aviation = "home"
+astro = "home"
+calendar = "local"
+network = "local"
+connectivity = "default"
+pfsense = "main_router"
+solar = "home"
+
+[domains]
+required = [
+  "system",
+  "time",
+  "calendar",
+  "astro",
+  "weather",
+  "aviation",
+  "air",
+  "solar",
+  "network",
+  "connectivity",
+  "pfsense",
+]
+optional = [
+  "pollen",
+]
+
+[suite_cache]
+namespaces = ["sys", "tme", "orb", "wxr", "net", "env"]

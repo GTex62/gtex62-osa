@@ -1,0 +1,9 @@
+profile_id = "home"
+enabled = true
+source = "weather-derived"
+weather_profile = "home"
+
+[location]
+lat = 41.8781
+lon = -87.6298
+timezone = "America/Chicago"

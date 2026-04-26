@@ -1,0 +1,13 @@
+profile_id = "local"
+enabled = true
+timezone = "America/Chicago"
+
+[events]
+cache_ttl_sec = 86400
+extra_events_file = "__RUNTIME_ROOT__/state/events_extra.txt"
+
+[seasonal]
+cache_ttl_sec = 31536000
+
+[dst]
+mode = "auto_local"

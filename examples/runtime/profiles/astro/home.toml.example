@@ -1,0 +1,11 @@
+profile_id = "home"
+enabled = true
+source = "ephem"
+timezone = "America/Chicago"
+
+[location]
+lat = 41.8781
+lon = -87.6298
+
+[fallback]
+weather_profile = "home"

@@ -1,0 +1,12 @@
+profile_id = "main_router"
+enabled = true
+ssh_target = "pf"
+cache_ttl_sec = 1
+
+[interfaces]
+wan = "igc0"
+home = "igc1.10"
+iot = "igc1.20"
+guest = "igc1.30"
+infra = "igc1.40"
+cam = "igc1.50"
