@@ -1,7 +1,7 @@
 local M = {}
 local HOME = os.getenv("HOME") or ""
-local SUITE_ID = os.getenv("GTEX62_CONKY_SUITE_ID") or "osa"
-local CACHE_ROOT = os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-conky")
+local SUITE_ID = os.getenv("GTEX62_SUITE_ID") or os.getenv("GTEX62_CONKY_SUITE_ID") or "osa"
+local CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
 local NET_CACHE_DIR = string.format("%s/suites/%s/net", CACHE_ROOT, SUITE_ID)
 
 local CACHE = {

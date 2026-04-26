@@ -1,12 +1,12 @@
-# Engine V1 ORB Cache For OSA
+# Core V1 ORB Cache For OSA
 
 ## Purpose
 
 This note documents the current suite-local `ORB` cache contract used by `gtex62-osa`.
 
-This is not the same thing as the shared engine `astro` schema.
+This is not the same thing as the shared core `astro` schema.
 
-The shared engine `astro` domain remains normalized truth.
+The shared core `astro` domain remains normalized truth.
 This cache is an OSA-specific derived ephemeris projection used to keep `ORB` rendering off the draw path.
 
 ---
@@ -17,7 +17,7 @@ This cache is an OSA-specific derived ephemeris projection used to keep `ORB` re
 
 - shared/background inputs:
   - `sky.vars`
-  - engine- or suite-generated astronomical source data
+  - core- or suite-generated astronomical source data
 - suite cache lane:
   - `ephemeris.vars`
 - render lane:
@@ -39,11 +39,11 @@ into the suite cache.
 
 For OSA:
 
-- `~/.cache/gtex62-conky/suites/osa/orb/ephemeris.vars`
+- `~/.cache/gtex62-core/suites/osa/orb/ephemeris.vars`
 
 Generalized shape:
 
-- `~/.cache/gtex62-conky/suites/<suite_id>/orb/ephemeris.vars`
+- `~/.cache/gtex62-core/suites/<suite_id>/orb/ephemeris.vars`
 
 ---
 
@@ -163,14 +163,14 @@ This cache should remain suite-local because it includes:
 - OSA-specific rise/set window handling
 - derived values chosen for the CELESTIAL panel rather than for all suites
 
-The shared engine `astro` schema should still own normalized truth such as:
+The shared core `astro` schema should still own normalized truth such as:
 
 - altitude
 - azimuth
 - above-horizon state
 - rise/set timing
 
-`ephemeris.vars` is a suite projection cache, not the engine’s canonical astronomy truth.
+`ephemeris.vars` is a suite projection cache, not the core's canonical astronomy truth.
 
 ---
 

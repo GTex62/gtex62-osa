@@ -14,5 +14,5 @@ This directory contains OSA-specific implementation notes and domain references.
 - [METAR AO2 / RMK Practical Reference](METAR_AO2_RMK_REFERENCE.md)
 - `WEATHER_STATION_MODEL.pdf`
 
-General engine architecture and normalized engine schemas live in
-`../../gtex62-conky-engine/docs/`.
+General core architecture and normalized schemas live in
+`../../gtex62-core/docs/`.

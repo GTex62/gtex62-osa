@@ -1,10 +1,10 @@
-# Engine V1 NET Cache For OSA
+# Core V1 NET Cache For OSA
 
 ## Purpose
 
 This note documents the current suite-local `NET` cache contract used by `gtex62-osa`.
 
-This is not a shared engine domain schema.
+This is not a shared core domain schema.
 
 It is an OSA-specific cache layer used to keep `NET` rendering off the draw path while preserving fast startup and responsive updates.
 
@@ -36,13 +36,13 @@ The launcher schedules that script in the background.
 
 For OSA:
 
-- `~/.cache/gtex62-conky/suites/osa/net/state.vars`
-- `~/.cache/gtex62-conky/suites/osa/net/vlan.tsv`
+- `~/.cache/gtex62-core/suites/osa/net/state.vars`
+- `~/.cache/gtex62-core/suites/osa/net/vlan.tsv`
 
 Generalized shape:
 
-- `~/.cache/gtex62-conky/suites/<suite_id>/net/state.vars`
-- `~/.cache/gtex62-conky/suites/<suite_id>/net/vlan.tsv`
+- `~/.cache/gtex62-core/suites/<suite_id>/net/state.vars`
+- `~/.cache/gtex62-core/suites/<suite_id>/net/vlan.tsv`
 
 ---
 
@@ -181,7 +181,7 @@ This cache should remain suite-local for now because it contains:
 - OSA-ready bar ratios
 - display-oriented reductions rather than normalized shared truth
 
-The engine may later define a normalized `network` or `connectivity` shared schema for broader reuse, but this current cache is a panel-oriented OSA projection.
+The core may later define a normalized `network` or `connectivity` shared schema for broader reuse, but this current cache is a panel-oriented OSA projection.
 
 ---
 

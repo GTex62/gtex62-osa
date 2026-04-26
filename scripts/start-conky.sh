@@ -3,14 +3,27 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUITE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-RUNTIME_ROOT="${GTEX62_CONKY_CONFIG_DIR:-$HOME/.config/gtex62-conky}"
-CACHE_ROOT="${GTEX62_CONKY_CACHE_DIR:-$HOME/.cache/gtex62-conky}"
-ENGINE_REPO="${GTEX62_CONKY_ENGINE_REPO:-$HOME/.config/conky/gtex62-conky-engine}"
-ENGINE_LAUNCHER="${GTEX62_CONKY_LAUNCHER:-$ENGINE_REPO/bin/gtex62-conky-launch}"
-SHARED_ASSETS_ROOT="${GTEX62_CONKY_SHARED_ASSETS:-$HOME/.config/conky/gtex62-shared-assets}"
-WALLPAPER_DIR="${GTEX62_CONKY_WALLPAPERS_DIR:-$SHARED_ASSETS_ROOT/wallpapers}"
+RUNTIME_ROOT="${GTEX62_CONFIG_DIR:-${GTEX62_CONKY_CONFIG_DIR:-$HOME/.config/gtex62-core}}"
+CACHE_ROOT="${GTEX62_CACHE_DIR:-${GTEX62_CONKY_CACHE_DIR:-$HOME/.cache/gtex62-core}}"
+CORE_REPO="${GTEX62_CORE_DIR:-${GTEX62_CONKY_ENGINE_REPO:-$HOME/.config/conky/gtex62-core}}"
+CORE_LAUNCHER="${GTEX62_CORE_LAUNCHER:-${GTEX62_CONKY_LAUNCHER:-$CORE_REPO/bin/gtex62-core-launch}}"
+SHARED_ASSETS_ROOT="${GTEX62_SHARED_ASSETS:-${GTEX62_CONKY_SHARED_ASSETS:-$HOME/.config/conky/gtex62-shared-assets}}"
+WALLPAPER_DIR="${GTEX62_WALLPAPERS_DIR:-${GTEX62_CONKY_WALLPAPERS_DIR:-$SHARED_ASSETS_ROOT/wallpapers}}"
+
+if [[ -z "${GTEX62_CONFIG_DIR:-}" && -z "${GTEX62_CONKY_CONFIG_DIR:-}" && ! -e "$RUNTIME_ROOT" && -e "$HOME/.config/gtex62-conky" ]]; then
+  RUNTIME_ROOT="$HOME/.config/gtex62-conky"
+fi
+
+if [[ -z "${GTEX62_CACHE_DIR:-}" && -z "${GTEX62_CONKY_CACHE_DIR:-}" && ! -e "$CACHE_ROOT" && -e "$HOME/.cache/gtex62-conky" ]]; then
+  CACHE_ROOT="$HOME/.cache/gtex62-conky"
+fi
 
 export CONKY_SUITE_DIR="$SUITE_DIR"
+export GTEX62_CONFIG_DIR="$RUNTIME_ROOT"
+export GTEX62_CACHE_DIR="$CACHE_ROOT"
+export GTEX62_SUITE_ID="osa"
+export GTEX62_SHARED_ASSETS="$SHARED_ASSETS_ROOT"
+export GTEX62_WALLPAPERS_DIR="$WALLPAPER_DIR"
 export GTEX62_CONKY_CONFIG_DIR="$RUNTIME_ROOT"
 export GTEX62_CONKY_CACHE_DIR="$CACHE_ROOT"
 export GTEX62_CONKY_SUITE_ID="osa"
@@ -89,14 +102,22 @@ choose_wallpaper() {
 
 choose_wallpaper
 
-if [[ -x "$ENGINE_LAUNCHER" ]]; then
-  nohup "$ENGINE_LAUNCHER" --suite osa >/dev/null 2>&1 &
+if [[ ! -x "$CORE_LAUNCHER" && -x "$CORE_REPO/bin/gtex62-conky-launch" ]]; then
+  CORE_LAUNCHER="$CORE_REPO/bin/gtex62-conky-launch"
+fi
+
+if [[ ! -x "$CORE_LAUNCHER" && -x "$HOME/.config/conky/gtex62-conky-engine/bin/gtex62-conky-launch" ]]; then
+  CORE_LAUNCHER="$HOME/.config/conky/gtex62-conky-engine/bin/gtex62-conky-launch"
+fi
+
+if [[ -x "$CORE_LAUNCHER" ]]; then
+  nohup "$CORE_LAUNCHER" --suite osa >/dev/null 2>&1 &
   disown || true
   exit 0
 fi
 
-echo "Engine launcher not found at:"
-echo "  $ENGINE_LAUNCHER"
+echo "Core launcher not found at:"
+echo "  $CORE_LAUNCHER"
 echo "Falling back to direct suite launch."
 
 nohup conky -c "$SUITE_DIR/widgets/osa-main.conky.conf" >/dev/null 2>&1 &

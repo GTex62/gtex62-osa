@@ -4,7 +4,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUITE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SRC_DIR="$SUITE_DIR/examples/runtime"
-RUNTIME_ROOT="${GTEX62_CONKY_CONFIG_DIR:-$HOME/.config/gtex62-conky}"
+RUNTIME_ROOT="${GTEX62_CONFIG_DIR:-${GTEX62_CONKY_CONFIG_DIR:-$HOME/.config/gtex62-core}}"
+if [[ -z "${GTEX62_CONFIG_DIR:-}" && -z "${GTEX62_CONKY_CONFIG_DIR:-}" && ! -e "$RUNTIME_ROOT" && -e "$HOME/.config/gtex62-conky" ]]; then
+  RUNTIME_ROOT="$HOME/.config/gtex62-conky"
+fi
 FORCE=0
 
 if [[ "${1:-}" == "--force" ]]; then
@@ -47,7 +50,7 @@ while IFS= read -r -d '' file; do
   install_template "$file"
 done < <(find "$SRC_DIR" -type f -name '*.example' -print0 | sort -z)
 
-mkdir -p "$RUNTIME_ROOT/overrides/engine" "$RUNTIME_ROOT/overrides/suites" "$RUNTIME_ROOT/state"
+mkdir -p "$RUNTIME_ROOT/overrides/core" "$RUNTIME_ROOT/overrides/suites" "$RUNTIME_ROOT/state"
 
 cat <<EOF
 

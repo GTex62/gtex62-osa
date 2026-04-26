@@ -1,10 +1,10 @@
-engine_id = "gtex62-conky"
+core_id = "gtex62-core"
 version = "0.1.0"
 
 [paths]
 config_root = "__RUNTIME_ROOT__"
-data_root = "__HOME__/.local/share/gtex62-conky"
-cache_root = "__HOME__/.cache/gtex62-conky"
+data_root = "__HOME__/.local/share/gtex62-core"
+cache_root = "__HOME__/.cache/gtex62-core"
 suites_root = "__HOME__/.config/conky"
 
 [registry]

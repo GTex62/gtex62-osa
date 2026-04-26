@@ -3,8 +3,8 @@ local M = {}
 local HOME = os.getenv("HOME") or ""
 local SUITE_DIR = os.getenv("CONKY_SUITE_DIR") or (HOME .. "/.config/conky/gtex62-osa")
 local CACHE_DIR = os.getenv("CONKY_CACHE_DIR") or ((os.getenv("XDG_CACHE_HOME") or (HOME .. "/.cache")) .. "/conky")
-local ENGINE_CACHE_ROOT = os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-conky")
-local SUITE_ID = os.getenv("GTEX62_CONKY_SUITE_ID") or "osa"
+local ENGINE_CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
+local SUITE_ID = os.getenv("GTEX62_SUITE_ID") or os.getenv("GTEX62_CONKY_SUITE_ID") or "osa"
 local SUITE_CACHE_DIR = string.format("%s/suites/%s/orb", ENGINE_CACHE_ROOT, SUITE_ID)
 
 local BODY_ROWS = {

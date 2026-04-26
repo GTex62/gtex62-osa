@@ -1,8 +1,8 @@
 local M = {}
 
 local HOME = os.getenv("HOME") or ""
-local RUNTIME_ROOT = os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-conky")
-local DEFAULT_ENGINE_CACHE_ROOT = os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-conky")
+local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
+local DEFAULT_ENGINE_CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
 
 local CACHE = {
   tick = nil,
@@ -85,6 +85,10 @@ local function parse_simple_toml(path)
 end
 
 local function engine_config()
+  local cfg = parse_simple_toml(RUNTIME_ROOT .. "/core.toml")
+  if next(cfg) ~= nil then
+    return cfg
+  end
   return parse_simple_toml(RUNTIME_ROOT .. "/engine.toml")
 end
 

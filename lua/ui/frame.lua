@@ -5,7 +5,7 @@ local HOME = os.getenv("HOME") or ""
 local LCARS_SUITE_DIR = HOME .. "/.config/conky/gtex62-lcars"
 local ORB_COAST_RINGS = nil
 local SUITE_DIR = os.getenv("CONKY_SUITE_DIR") or (HOME .. "/.config/conky/gtex62-osa")
-local RUNTIME_ROOT = os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-conky")
+local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
 
 local FOOTER_VERSION_CACHE = {
   tick = nil,
@@ -59,14 +59,16 @@ local function version_identity_label()
     return FOOTER_VERSION_CACHE.label
   end
 
-  local engine_version = simple_toml_value(RUNTIME_ROOT .. "/engine.toml", "version") or "UNKNOWN"
+  local engine_version = simple_toml_value(RUNTIME_ROOT .. "/core.toml", "version")
+    or simple_toml_value(RUNTIME_ROOT .. "/engine.toml", "version")
+    or "UNKNOWN"
   local suite_version = simple_toml_value(SUITE_DIR .. "/suite.toml", "version")
     or simple_toml_value(RUNTIME_ROOT .. "/suites/osa.toml", "version")
     or "UNKNOWN"
 
   FOOTER_VERSION_CACHE.tick = tick
   FOOTER_VERSION_CACHE.label = string.format(
-    "ENGINE %s // OSA %s",
+    "CORE %s // OSA %s",
     string.upper(engine_version),
     string.upper(suite_version)
   )

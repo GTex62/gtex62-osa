@@ -16,8 +16,8 @@ end
 
 local HOME = os.getenv("HOME") or ""
 local XDG_CACHE_HOME = os.getenv("XDG_CACHE_HOME") or (HOME .. "/.cache")
-local RUNTIME_ROOT = os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-conky")
-local DEFAULT_ENGINE_CACHE_ROOT = os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-conky")
+local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
+local DEFAULT_ENGINE_CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
 local DEFAULT_EVENT_CACHE = (os.getenv("CONKY_CACHE_DIR") or (XDG_CACHE_HOME .. "/conky")) .. "/events_cache.txt"
 local DEFAULT_EXTRA_EVENTS = RUNTIME_ROOT .. "/state/events_extra.txt"
 
@@ -64,6 +64,10 @@ local function calendar_profile()
 end
 
 local function engine_config()
+  local cfg = parse_simple_toml(RUNTIME_ROOT .. "/core.toml")
+  if next(cfg) ~= nil then
+    return cfg
+  end
   return parse_simple_toml(RUNTIME_ROOT .. "/engine.toml")
 end
 

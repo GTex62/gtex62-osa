@@ -1,10 +1,10 @@
 # Runtime Templates
 
-These files are example templates for the engine runtime root.
+These files are example templates for the core runtime root.
 
 They are intended to be copied into:
 
-- `~/.config/gtex62-conky/`
+- `~/.config/gtex62-core/`
 
 The bootstrap helper:
 

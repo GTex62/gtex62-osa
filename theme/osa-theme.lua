@@ -1,9 +1,14 @@
 local theme = {}
 local HOME = os.getenv("HOME") or ""
-local ENGINE_DIR = os.getenv("GTEX62_CONKY_ENGINE_DIR") or (HOME .. "/.config/conky/gtex62-conky-engine")
+local CORE_DIR = os.getenv("GTEX62_CORE_DIR")
+  or os.getenv("GTEX62_CONKY_ENGINE_DIR")
+  or (HOME .. "/.config/conky/gtex62-core")
 
 local function load_engine_runtime()
-  local ok, runtime = pcall(dofile, ENGINE_DIR .. "/lua/runtime/window.lua")
+  local ok, runtime = pcall(dofile, CORE_DIR .. "/lua/runtime/window.lua")
+  if not ok and not os.getenv("GTEX62_CORE_DIR") and not os.getenv("GTEX62_CONKY_ENGINE_DIR") then
+    ok, runtime = pcall(dofile, HOME .. "/.config/conky/gtex62-conky-engine/lua/runtime/window.lua")
+  end
   if ok and type(runtime) == "table" then
     return runtime
   end
@@ -588,8 +593,12 @@ function theme.window_size(frame)
   }
 end
 
+function theme.core_dir()
+  return CORE_DIR
+end
+
 function theme.engine_dir()
-  return ENGINE_DIR
+  return CORE_DIR
 end
 
 function theme.using_engine_runtime()

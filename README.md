@@ -1,6 +1,7 @@
 # gtex62-osa
 
-`gtex62-osa` is the first native suite for the shared Conky engine architecture.
+`gtex62-osa` is the first native suite for the shared `gtex62-core`
+Lua/Conky foundation.
 
 This repo is now structured as a thin suite repo:
 
@@ -9,14 +10,15 @@ This repo is now structured as a thin suite repo:
 - suite assets and reference material
 - optional suite-derived cache helpers
 
-Shared provider logic, runtime config, normalized cache, and launcher behavior belong to the engine layer rather than this suite repo.
+Shared provider logic, runtime config, normalized cache, and launcher behavior
+belong to `gtex62-core` rather than this suite repo.
 
 Shared binary assets such as wallpapers, reusable icons, and fonts live in
 `../gtex62-shared-assets/`.
 
-Engine architecture and normalized schema docs live in:
+Core architecture and normalized schema docs live in:
 
-- `../gtex62-conky-engine/docs/`
+- `../gtex62-core/docs/`
 
 ## Repo Layout
 
@@ -37,16 +39,16 @@ gtex62-osa/
 ├── theme/         # theme and layout definitions
 ├── widgets/       # Conky entrypoints
 └── legacy/
-    └── config/    # archived pre-engine suite-local config for migration reference
+    └── config/    # archived pre-core suite-local config for migration reference
 ```
 
 ## Boundary
 
-These concerns belong in the engine, not this repo:
+These concerns belong in the core, not this repo:
 
 - weather, air, aviation, astro, calendar, network, connectivity, pfSense providers
 - normalized shared cache
-- engine doctor
+- core doctor
 - path resolution
 - profile binding
 - launch/runtime orchestration
@@ -68,16 +70,16 @@ Shared asset root:
 - [Design Index](design/README.md)
 - [Docs Index](docs/README.md)
 
-General engine architecture is maintained by `gtex62-conky-engine`; this repo
+General core architecture is maintained by `gtex62-core`; this repo
 only carries OSA-specific references and suite-local implementation notes.
 
 ## Runtime Model
 
-Expected engine-era runtime roots:
+Expected core-era runtime roots:
 
-- config: `~/.config/gtex62-conky/`
-- data: `~/.local/share/gtex62-conky/`
-- cache: `~/.cache/gtex62-conky/`
+- config: `~/.config/gtex62-core/`
+- data: `~/.local/share/gtex62-core/`
+- cache: `~/.cache/gtex62-core/`
 
 Expected suite repo path:
 
@@ -93,8 +95,13 @@ Compatibility launcher:
 
 - `scripts/start-conky.sh`
 
-This exists so existing launchers such as `~/.local/bin/conkystart` can still treat `gtex62-osa` like the older suites. When an engine launcher exists, this wrapper should delegate to it. Until then, it falls back to launching the local OSA Conky config directly.
+This exists so existing launchers such as `~/.local/bin/conkystart` can still
+treat `gtex62-osa` like the older suites. When a core launcher exists, this
+wrapper should delegate to it. Until then, it falls back to launching the local
+OSA Conky config directly.
 
 ## Migration Note
 
-The old suite-local `config/` directory was moved to `legacy/config/` so the previous files remain available as reference while the engine-native layout is established.
+The old suite-local `config/` directory was moved to `legacy/config/` so the
+previous files remain available as reference while the core-native layout is
+established.
