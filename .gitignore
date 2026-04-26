@@ -19,12 +19,15 @@ legacy/config/*.vars
 /runtime/
 /tmp/
 /logs/
+/bak/
 examples/runtime/state/
 *.log
 *.pid
 *.lock
 *.stamp
 *.tmp
+*.bak
+*.bak2
 
 # Generated cache/provider output
 *.json.tmp
@@ -47,6 +50,7 @@ Thumbs.db
 *.swo
 .vscode/
 .idea/
+**/.comments/
 
 # Lua/Python bytecode
 *.luac
