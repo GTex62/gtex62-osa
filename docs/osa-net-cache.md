@@ -59,6 +59,8 @@ TITLE=Intel I219-V
 STATUS=ONLINE
 LIVE_PERCENT=100
 SPEEDTEST_DOWN=594
+SPEEDTEST_AGE=06:42
+SPEEDTEST_DELTA=+094
 WAN_IP=73.177.9.62
 LAN_IP=192.168.10.3
 DNS=192.168.40.7
@@ -66,6 +68,10 @@ SUBNET=255.255.255.0
 GATEWAY=192.168.10.1
 CF_1111_MS=14.4
 GOOGLE_8888_MS=20.2
+SSH_TRIPPED=0
+SSH_STATUS=OK
+SSH_REASON=
+SSH_LEFT=0
 ```
 
 ## Required Keys
@@ -76,6 +82,8 @@ GOOGLE_8888_MS=20.2
 - `STATUS`
 - `LIVE_PERCENT`
 - `SPEEDTEST_DOWN`
+- `SPEEDTEST_AGE`
+- `SPEEDTEST_DELTA`
 - `WAN_IP`
 - `LAN_IP`
 - `DNS`
@@ -96,6 +104,10 @@ GOOGLE_8888_MS=20.2
   - display-ready online meter value, currently `100` or `0`
 - `SPEEDTEST_DOWN`
   - cached speedtest download Mbps summary used in the NET status line
+- `SPEEDTEST_AGE`
+  - elapsed time since the cached speedtest snapshot, shown as `HH:MM` under 24 hours, `NNd` after that, or `--:--` when unavailable
+- `SPEEDTEST_DELTA`
+  - signed Mbps delta from the configured baseline, or `---` when unavailable
 - `WAN_IP`
   - cached WAN IP summary
 - `LAN_IP`
@@ -110,6 +122,14 @@ GOOGLE_8888_MS=20.2
   - cached ping result for `1.1.1.1`
 - `GOOGLE_8888_MS`
   - cached ping result for `8.8.8.8`
+- `SSH_TRIPPED`
+  - `1` when the shared pfSense SSH gate is in cooldown, otherwise `0`
+- `SSH_STATUS`
+  - raw core pfSense SSH gate status output
+- `SSH_REASON`
+  - gate trip reason such as `PF_SSH_FAIL`
+- `SSH_LEFT`
+  - remaining cooldown seconds when tripped
 
 ---
 
@@ -163,12 +183,16 @@ OSA still uses Conky live expressions for:
 - `live_download_kib()`
 - `live_upload_kib()`
 
-OSA still reads the shared speedtest snapshot directly for:
+OSA still reads the cached core speedtest snapshot directly for:
 
 - `speedtest_download_mbps()`
 - `speedtest_upload_mbps()`
 
-That means `NET` is intentionally hybrid rather than purely cache-driven.
+The speedtest snapshot helper lives in core and writes into the same OSA NET suite-cache namespace:
+
+- `~/.cache/gtex62-core/suites/<suite_id>/net/speedtest_snapshot.json`
+
+That means `NET` is intentionally hybrid rather than purely `state.vars`-driven.
 
 ---
 
@@ -194,6 +218,14 @@ The launcher currently schedules:
 
 Current default:
 
-- `5` seconds
+- `1` second
+
+VLAN meter values are a fast projection lane: OSA uses core `network` for the
+configured host list, then refreshes the displayed VLAN ping ratios in this
+suite cache rather than waiting for the slower shared network snapshot.
+The VLAN probes are run in parallel so one slow target does not stretch the
+whole NET refresh interval.
+The external ping values for `1.1.1.1` and `8.8.8.8` are also refreshed in this
+fast projection lane rather than using the start-only core connectivity cache.
 
 This keeps `NET` content ready without blocking first draw.

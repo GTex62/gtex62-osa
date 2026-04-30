@@ -119,16 +119,6 @@ local function weather_profile_id()
   return profile_id
 end
 
-local function air_profile_id()
-  local profile_id = profile_config("air", "home")
-  return profile_id
-end
-
-local function air_profile_cfg()
-  local _, cfg = profile_config("air", "home")
-  return cfg or {}
-end
-
 local function aviation_profile_id()
   local profile_id = profile_config("aviation", "home")
   return profile_id
@@ -146,10 +136,6 @@ end
 
 local function aviation_shared_dir()
   return string.format("%s/shared/aviation/%s", engine_cache_root(), aviation_profile_id())
-end
-
-local function air_shared_dir()
-  return string.format("%s/shared/air/%s", engine_cache_root(), air_profile_id())
 end
 
 local function weather_current_path()
@@ -170,14 +156,6 @@ end
 
 local function aviation_status_path()
   return aviation_shared_dir() .. "/status.json"
-end
-
-local function air_current_path()
-  return air_shared_dir() .. "/current.json"
-end
-
-local function air_status_path()
-  return air_shared_dir() .. "/status.json"
 end
 
 local function json_query(path, filter)
@@ -208,6 +186,18 @@ local function parse_iso_utc(text)
     y, m, d, hh, mm, ss
   ))
   return tonumber(epoch)
+end
+
+local function parse_timestamp(value)
+  local n = tonumber(value)
+  if n and n > 0 then
+    return n
+  end
+  return parse_iso_utc(value)
+end
+
+local function json_timestamp(path, filter)
+  return parse_timestamp(json_query(path, filter))
 end
 
 local function format_hhmm_local(ts)
@@ -270,30 +260,19 @@ local function taf_issue_ts(raw)
 end
 
 local function weather_data_state()
-  local air_cfg = air_profile_cfg()
-  local airnow_enabled = tostring(((air_cfg or {}).airnow or {}).enabled or "") == "true"
-  local airnow_api_key = normalize_spaces(tostring(((air_cfg or {}).airnow or {}).api_key or ""))
-  local airnow_configured = airnow_enabled and airnow_api_key ~= ""
   local weather_status_state = json_query(weather_status_path(), ".state // empty")
   local aviation_status_state = json_query(aviation_status_path(), ".state // empty")
-  local air_status_state = json_query(air_status_path(), ".state // empty")
   local weather_current_ok = file_exists(weather_current_path())
   local weather_forecast_ok = file_exists(weather_forecast_path())
   local aviation_ok = file_exists(aviation_current_path())
-  local air_ok = (not airnow_configured) or file_exists(air_current_path()) or file_exists(air_status_path())
-  local complete = weather_current_ok and weather_forecast_ok and aviation_ok and air_ok
+  local complete = weather_current_ok and weather_forecast_ok and aviation_ok
 
-  local weather_provider_ts = parse_iso_utc(json_query(weather_status_path(), ".provider_updated_at // .generated_at // empty"))
-  local aviation_generated_ts = parse_iso_utc(json_query(aviation_current_path(), ".generated_at // empty"))
-  local air_generated_ts = parse_iso_utc(
-    json_query(air_status_path(), ".provider_updated_at // .generated_at // empty")
-    or json_query(air_current_path(), ".generated_at // empty")
-  )
+  local weather_provider_ts = json_timestamp(weather_status_path(), ".provider_updated_at // .generated_at // empty")
+  local aviation_generated_ts = json_timestamp(aviation_current_path(), ".generated_at // empty")
   local newest_age = nil
   local ages = {}
   if weather_provider_ts then ages[#ages + 1] = os.time() - weather_provider_ts end
   if aviation_generated_ts then ages[#ages + 1] = os.time() - aviation_generated_ts end
-  if airnow_configured and air_generated_ts then ages[#ages + 1] = os.time() - air_generated_ts end
   if #ages > 0 then
     newest_age = ages[1]
     for i = 2, #ages do
@@ -301,7 +280,7 @@ local function weather_data_state()
     end
   end
 
-  if weather_status_state == "error" or aviation_status_state == "error" or (airnow_configured and air_status_state == "error") then
+  if weather_status_state == "error" or aviation_status_state == "error" then
     return "FAULT"
   end
   if not complete then
@@ -918,7 +897,12 @@ local function decode_station_model()
   if parsed.precip_1h_in ~= nil then
     precip_value = format_precip_inches(parsed.precip_1h_in)
   end
-  local slp_hpa = parsed.slp_code_source == "remark" and hpa_from_slp_code(parsed.slp_code) or parsed.altimeter_hpa
+  local slp_hpa = nil
+  if parsed.slp_code_source == "remark" then
+    slp_hpa = hpa_from_slp_code(parsed.slp_code)
+  else
+    slp_hpa = parsed.altimeter_hpa or inhg_to_hpa(parsed.altimeter_inhg)
+  end
   local slp_inhg = slp_hpa and hpa_to_inhg(slp_hpa) or parsed.altimeter_inhg
   return {
     station = aviation_station("metar"),
@@ -1164,23 +1148,12 @@ local function refresh()
 end
 
 function M.status_lines()
-  local air_cfg = air_profile_cfg()
-  local airnow_enabled = tostring(((air_cfg or {}).airnow or {}).enabled or "") == "true"
-  local airnow_api_key = normalize_spaces(tostring(((air_cfg or {}).airnow or {}).api_key or ""))
-  local airnow_configured = airnow_enabled and airnow_api_key ~= ""
-  local owm_ts = parse_iso_utc(json_query(weather_status_path(), ".provider_updated_at // .generated_at // empty"))
-  local anw_ts = parse_iso_utc(
-    json_query(air_status_path(), ".provider_updated_at // .generated_at // empty")
-    or json_query(air_current_path(), ".generated_at // empty")
-  )
+  local owm_ts = json_timestamp(weather_status_path(), ".provider_updated_at // .generated_at // empty")
   local metar_raw = read_aviation_text("metar") or ""
   local taf_raw = read_aviation_text("taf") or ""
   local mtr_ts = metar_observation_ts(metar_raw)
   local taf_ts = taf_issue_ts(taf_raw)
   local src_line = string.format("SRC // OWM %s", format_hhmm_local(owm_ts))
-  if airnow_configured then
-    src_line = string.format("%s | ANW %s", src_line, format_hhmm_local(anw_ts))
-  end
 
   return {
     "DATA // " .. weather_data_state(),

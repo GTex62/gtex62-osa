@@ -2,7 +2,6 @@ suite_id = "osa"
 name = "gtex62-osa"
 version = "0.1.0"
 core_requirement = ">=1.0,<2.0"
-engine_requirement = ">=1.0,<2.0"
 
 [repo]
 layout = "core-native"
@@ -20,6 +19,3 @@ shared_assets_dir = "../gtex62-shared-assets"
 fonts_dir = "../gtex62-shared-assets/fonts"
 icons_dir = "../gtex62-shared-assets/icons"
 wallpapers_dir = "../gtex62-shared-assets/wallpapers"
-
-[notes]
-legacy_config_archive = "legacy/config"

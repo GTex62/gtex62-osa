@@ -1,7 +1,0 @@
-# Optional extra events for the linear calendar event stacks.
-# Format: YYYY-MM-DD|Name|Type
-# Example:
-# 2026-01-04|Perihelion|Perihelion
-# 2026-07-06|Aphelion|Aphelion
-# 2026-08-13|Perseid Meteor Shower Peak|Meteor Shower
-# 2026-03-03|Total Lunar Eclipse|Eclipse

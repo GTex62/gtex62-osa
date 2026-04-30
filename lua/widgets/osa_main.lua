@@ -10,6 +10,7 @@ local tme = nil
 local wxr = nil
 local net = nil
 local orb = nil
+local env = nil
 
 local function ensure_loaded()
   if runtime ~= nil then
@@ -23,6 +24,7 @@ local function ensure_loaded()
   wxr = dofile(SUITE_DIR .. "/lua/suite/wxr.lua")
   net = dofile(SUITE_DIR .. "/lua/suite/net.lua")
   orb = dofile(SUITE_DIR .. "/lua/suite/orb.lua")
+  env = dofile(SUITE_DIR .. "/lua/suite/env.lua")
 end
 
 function conky_draw_osa()
@@ -48,6 +50,7 @@ function conky_draw_osa()
       wxr = wxr,
       net = net,
       orb = orb,
+      env = env,
     })
   end
 

@@ -16,7 +16,7 @@ This cache is an OSA-specific derived ephemeris projection used to keep `ORB` re
 `ORB` is currently split into:
 
 - shared/background inputs:
-  - `sky.vars`
+  - normalized core astro/profile location data
   - core- or suite-generated astronomical source data
 - suite cache lane:
   - `ephemeris.vars`
@@ -137,8 +137,6 @@ For each body, the cache may contain:
 
 [lua/suite/orb.lua](/home/gtex62/.config/conky/gtex62-osa/lua/suite/orb.lua) currently uses:
 
-- `sky.vars`
-  - as one astronomical input source
 - `ephemeris.vars`
   - as the cached suite-local ephemeris source
 

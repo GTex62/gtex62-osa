@@ -1,14 +1,11 @@
 local theme = {}
 local HOME = os.getenv("HOME") or ""
 local CORE_DIR = os.getenv("GTEX62_CORE_DIR")
-  or os.getenv("GTEX62_CONKY_ENGINE_DIR")
-  or (HOME .. "/.config/conky/gtex62-core")
+    or os.getenv("GTEX62_CONKY_ENGINE_DIR")
+    or (HOME .. "/.config/conky/gtex62-core")
 
 local function load_engine_runtime()
   local ok, runtime = pcall(dofile, CORE_DIR .. "/lua/runtime/window.lua")
-  if not ok and not os.getenv("GTEX62_CORE_DIR") and not os.getenv("GTEX62_CONKY_ENGINE_DIR") then
-    ok, runtime = pcall(dofile, HOME .. "/.config/conky/gtex62-conky-engine/lua/runtime/window.lua")
-  end
   if ok and type(runtime) == "table" then
     return runtime
   end
@@ -528,7 +525,7 @@ theme.orb = {
     line_step = 22,
   },
   celestial = {
-    x = 8,
+    x = 16,
     y = 20,
     width = 456,
     body_w = 48,
@@ -571,6 +568,46 @@ theme.orb = {
       enabled = true,
       stroke_width = 1,
     },
+  },
+}
+
+theme.env = {
+  status = {
+    x = 46,
+    y = 36,
+    line_step = 22,
+  },
+  atmos = {
+    x = 16,
+    y = 18, -- position also changes meter height
+    width = 456,
+    header_h = 16,
+    header_gap = 2,
+    header_font_pt = 16,
+    row_font_pt = 14,
+    row_h = 16,
+    table_gap = 0,
+    table_value_w = 36,
+    meter_w = 68,
+    solar_meter_w = 136,
+    meter_gap = 16,
+    footer_h = 16,
+    footer_gap = 2,
+    aqi_value_y = 34,
+    aqi_value_font_pt = 14,
+    aqi_value_spread = 22,
+    owm_aqi_bar_max = 5,
+    meter_value_font_pt = 20,
+    solar_value_spread = 40,
+    meter_bar_w = 8,
+    meter_bar_gap = 16,
+    meter_marks = {
+      short = 5,
+      medium = 8,
+      long = 11,
+    },
+    pollution_rows = 7,
+    pollen_rows = 4,
   },
 }
 

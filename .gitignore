@@ -7,12 +7,6 @@
 *token*
 *key*
 
-# Legacy local config with credentials or machine-specific values
-legacy/config/*.env
-legacy/config/*.vars
-!legacy/config/*.env.example
-!legacy/config/*.vars.example
-
 # Runtime and generated data
 /cache/
 /data/
@@ -20,7 +14,6 @@ legacy/config/*.vars
 /tmp/
 /logs/
 /bak/
-examples/runtime/state/
 *.log
 *.pid
 *.lock

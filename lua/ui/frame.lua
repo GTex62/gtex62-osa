@@ -2,10 +2,13 @@
 
 local M = {}
 local HOME = os.getenv("HOME") or ""
-local LCARS_SUITE_DIR = HOME .. "/.config/conky/gtex62-lcars"
 local ORB_COAST_RINGS = nil
 local SUITE_DIR = os.getenv("CONKY_SUITE_DIR") or (HOME .. "/.config/conky/gtex62-osa")
 local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
+local SHARED_ASSETS_DIR = os.getenv("GTEX62_SHARED_ASSETS_DIR")
+  or os.getenv("GTEX62_SHARED_ASSETS")
+  or os.getenv("GTEX62_CONKY_SHARED_ASSETS")
+  or (HOME .. "/.config/conky/gtex62-shared-assets")
 
 local FOOTER_VERSION_CACHE = {
   tick = nil,
@@ -434,6 +437,20 @@ local function draw_meter_value(cr, x, y, value, font_pt, color, theme)
   )
 end
 
+local function draw_meter_value_center(cr, x, y, value, font_pt, color, theme)
+  local numeric = tonumber(value) or 0
+  draw_text_center_mid(
+    cr,
+    x,
+    y,
+    string.format("%03d", math.floor(numeric + 0.5)),
+    theme.fonts.data,
+    font_pt,
+    color,
+    CAIRO_FONT_WEIGHT_NORMAL
+  )
+end
+
 local function draw_meter_bar(cr, x, y_top, y_bottom, value, max_value, width, color)
   local numeric = tonumber(value) or 0
   local max_v = tonumber(max_value) or 100
@@ -468,12 +485,151 @@ local function draw_table_header(cr, x, y, w, h, label, font_pt, theme)
   )
 end
 
+local function draw_split_table_header(cr, x, y, left_w, gap_w, right_w, h, left_label, right_label, font_pt, theme)
+  draw_table_header(cr, x, y, left_w, h, left_label, font_pt, theme)
+  draw_table_header(cr, x + left_w + gap_w, y, right_w, h, right_label, font_pt, theme)
+end
+
 local function draw_hbar(cr, x, y, w, h, ratio, color)
   local numeric = tonumber(ratio) or 0
   local clamped = math.max(0, math.min(1, numeric))
   local fill_w = math.floor((w * clamped) + 0.5)
   if fill_w <= 0 then return end
   fill_rect(cr, x, y, fill_w, h, color)
+end
+
+local function draw_env_meter(cr, theme, x, y, w, cfg, label, value, bar_specs, footer_left, footer_right)
+  local header_h = tonumber(cfg.header_h) or 16
+  local footer_h = tonumber(cfg.footer_h) or 16
+  local footer_gap = tonumber(cfg.footer_gap) or 2
+  local font_pt = tonumber(cfg.header_font_pt) or theme.text.body_xs_pt
+  local value_y = tonumber(cfg.meter_value_y) or 92
+  local bar_w = tonumber(cfg.meter_bar_w) or 8
+  local meter_bottom = y + (tonumber(cfg.height) or 216)
+  local footer_y = meter_bottom - footer_h
+  local body_top = y + header_h + 2
+  local body_h = math.max(0, footer_y - body_top)
+  local center_x = x + math.floor(w / 2)
+  local marks = cfg.meter_marks or {}
+  local short = tonumber(marks.short) or 5
+  local medium = tonumber(marks.medium) or 8
+  local long = tonumber(marks.long) or 11
+
+  draw_table_header(cr, x, y, w, header_h, label, font_pt, theme)
+  draw_rect(cr, x, y + header_h + 1, w, 1, theme.strokes.line, theme.colors.fg)
+  draw_rect(cr, center_x, body_top, 1, body_h, theme.strokes.line, theme.colors.fg)
+
+  for i = 1, 11 do
+    local len = short
+    if i == 6 then
+      len = long
+    elseif i == 3 or i == 9 then
+      len = medium
+    end
+    local tick_y = body_top + math.floor((body_h * (i / 12)) + 0.5)
+    draw_rect(cr, center_x - math.floor(len / 2), tick_y, len, 1, theme.strokes.line, theme.colors.fg)
+  end
+
+  if type(bar_specs) == "table" then
+    local count = #bar_specs
+    local gap = tonumber(cfg.meter_bar_gap) or 16
+    local total_w = (count * bar_w) + (math.max(0, count - 1) * gap)
+    local first_x = center_x - (total_w / 2)
+    for i, spec in ipairs(bar_specs) do
+      local bar_x = first_x + ((i - 1) * (bar_w + gap))
+      draw_meter_bar(
+        cr,
+        bar_x,
+        body_top,
+        footer_y,
+        spec.value,
+        spec.max_value,
+        bar_w,
+        theme.colors.fg
+      )
+      if spec.show_value ~= false then
+        local font_pt = tonumber(spec.value_font_pt) or tonumber(cfg.meter_value_font_pt) or 20
+        local text_y = y + (tonumber(spec.value_y) or value_y)
+        if spec.value_center_x then
+          draw_meter_value_center(
+            cr,
+            tonumber(spec.value_center_x) or (bar_x + (bar_w / 2)),
+            text_y,
+            spec.value,
+            font_pt,
+            theme.colors.fg,
+            theme
+          )
+        else
+          draw_meter_value(
+            cr,
+            tonumber(spec.value_x) or (bar_x - 10),
+            text_y,
+            spec.value,
+            font_pt,
+            theme.colors.fg,
+            theme
+          )
+        end
+      end
+    end
+  end
+
+  if value ~= nil then
+    draw_meter_value(
+      cr,
+      x + math.floor(w * 0.5) - 20,
+      y + value_y,
+      value,
+      tonumber(cfg.meter_value_font_pt) or 20,
+      theme.colors.fg,
+      theme
+    )
+  end
+
+  local footer_w = (w - footer_gap) / 2
+  draw_table_header(cr, x, footer_y, footer_w, footer_h, footer_left, font_pt, theme)
+  draw_table_header(cr, x + footer_w + footer_gap, footer_y, footer_w, footer_h, footer_right, font_pt, theme)
+end
+
+local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_limit)
+  local header_h = tonumber(cfg.header_h) or 16
+  local header_gap = tonumber(cfg.header_gap) or 2
+  local value_w = tonumber(cfg.table_value_w) or 36
+  local label_w = w - value_w - header_gap
+  local header_font_pt = tonumber(cfg.header_font_pt) or theme.text.body_xs_pt
+  local row_font_pt = tonumber(cfg.row_font_pt) or theme.text.micro_pt
+  local row_h = tonumber(cfg.row_h) or 16
+  local row_y = y + header_h + 12
+
+  draw_split_table_header(cr, x, y, label_w, header_gap, value_w, header_h, title, "(V)", header_font_pt, theme)
+  draw_rect(cr, x, y + header_h + 1, w, 1, theme.strokes.line, theme.colors.fg)
+
+  rows = rows or {}
+  for i = 1, math.min(#rows, tonumber(row_limit) or #rows) do
+    local row = rows[i] or {}
+    local mid_y = row_y + ((i - 1) * row_h)
+    draw_text_left_mid(
+      cr,
+      x,
+      mid_y,
+      string.upper(row.label or ""),
+      theme.fonts.data,
+      row_font_pt,
+      theme.colors.fg,
+      CAIRO_FONT_WEIGHT_NORMAL
+    )
+    draw_text_center_mid(
+      cr,
+      x + label_w + header_gap + (value_w / 2),
+      mid_y,
+      string.upper(tostring(row.value or "")),
+      theme.fonts.data,
+      row_font_pt,
+      theme.colors.fg,
+      CAIRO_FONT_WEIGHT_NORMAL
+    )
+  end
 end
 
 local function draw_station_wind_barb(cr, cx, cy, data, cfg, color)
@@ -805,17 +961,24 @@ local function draw_wxr_station_model(cr, theme, x, y, cfg, data)
 end
 
 local function orb_coast_rings()
-  if ORB_COAST_RINGS ~= nil then
+  if ORB_COAST_RINGS ~= nil and #ORB_COAST_RINGS > 0 then
     return ORB_COAST_RINGS
   end
 
-  local ok, data = pcall(dofile, LCARS_SUITE_DIR .. "/data/earth_coast_rings.lua")
-  if ok and type(data) == "table" then
-    ORB_COAST_RINGS = data
-  else
-    ORB_COAST_RINGS = {}
+  local candidates = {
+    SHARED_ASSETS_DIR .. "/data/geo/earth_coast_rings.lua",
+    SHARED_ASSETS_DIR .. "/data/earth_coast_rings.lua",
+  }
+
+  for _, path in ipairs(candidates) do
+    local ok, data = pcall(dofile, path)
+    if ok and type(data) == "table" then
+      ORB_COAST_RINGS = data
+      return ORB_COAST_RINGS
+    end
   end
 
+  ORB_COAST_RINGS = {}
   return ORB_COAST_RINGS
 end
 
@@ -837,9 +1000,8 @@ local function draw_orb_night_box(cr, x, y, w, h, theme, cfg)
   local utc_hour = (now.hour or 0) + ((now.min or 0) / 60) + ((now.sec or 0) / 3600)
   local box_w = w / 2
 
-  -- Track the night half as one rectangle that always remains fully inside
-  -- the repeated map viewport. As the box moves left, it wraps by jumping
-  -- back to the right edge instead of splitting across both edges.
+  -- Track the night half as one rectangle on the repeated map. Keep the left
+  -- edge visible; the right edge may clip briefly until the map wrap catches up.
   local sunset_lon = 15 * (18 - utc_hour)
   while sunset_lon < -180 do
     sunset_lon = sunset_lon + 360
@@ -875,11 +1037,8 @@ local function draw_orb_night_box(cr, x, y, w, h, theme, cfg)
     while box_x >= (x + w) do
       box_x = box_x - w
     end
-    while box_x < (x - box_w) do
+    while box_x < x do
       box_x = box_x + w
-    end
-    if box_x + box_w > (x + w) then
-      box_x = box_x - w
     end
   end
 
@@ -2391,6 +2550,148 @@ local function draw_orb_content(cr, theme, layout, panels, data)
   end
 end
 
+local function draw_env_content(cr, theme, layout, panels, data)
+  local env_panel = panels.env
+  local env_data = data and data.env
+  if not (env_panel and env_data and type(env_data.status_lines) == "function") then return end
+
+  local status_cfg = (((theme or {}).env or {}).status or {})
+  local x = layout.frame.x + env_panel.x + (tonumber(status_cfg.x) or 46)
+  local y = layout.frame.y + env_panel.y + (tonumber(status_cfg.y) or 36)
+  local line_step = tonumber(status_cfg.line_step) or 22
+
+  for i, line in ipairs(env_data.status_lines()) do
+    draw_text_left(
+      cr,
+      x,
+      y + ((i - 1) * line_step),
+      line,
+      theme.fonts.data,
+      theme.text.body_pt,
+      theme.colors.fg,
+      CAIRO_FONT_WEIGHT_NORMAL
+    )
+  end
+
+  local atmos_box = env_panel.boxes and env_panel.boxes.atmos
+  if not atmos_box then return end
+
+  local cfg = (((theme or {}).env or {}).atmos or {})
+  local table_cfg = {}
+  for k, v in pairs(cfg) do
+    table_cfg[k] = v
+  end
+  table_cfg.height = atmos_box.height - (2 * (tonumber(cfg.y) or 20))
+
+  local inner_x = layout.frame.x + env_panel.x + atmos_box.x + (tonumber(cfg.x) or 16)
+  local inner_y = layout.frame.y + env_panel.y + atmos_box.y + (tonumber(cfg.y) or 20)
+  local inner_w = tonumber(cfg.width) or (atmos_box.width - 32)
+  local meter_w = tonumber(cfg.meter_w) or 64
+  local solar_w = tonumber(cfg.solar_meter_w) or 136
+  local meter_gap = tonumber(cfg.meter_gap) or 16
+  local center_w = inner_w - meter_w - solar_w - (meter_gap * 2)
+  local center_x = inner_x + meter_w + meter_gap
+  local solar_x = center_x + center_w + meter_gap
+  local table_gap = tonumber(cfg.table_gap) or 16
+  local header_h = tonumber(cfg.header_h) or 16
+  local row_h = tonumber(cfg.row_h) or 16
+  local pollution_rows = tonumber(cfg.pollution_rows) or 7
+  local pollen_rows = tonumber(cfg.pollen_rows) or 4
+  local pollen_y = inner_y + header_h + 12 + (pollution_rows * row_h) + table_gap
+
+  local aqi_airnow_value = type(env_data.aqi_airnow_value) == "function" and env_data.aqi_airnow_value() or 0
+  local aqi_owm_value = type(env_data.aqi_owm_value) == "function" and env_data.aqi_owm_value() or 0
+  local uv_value = type(env_data.solar_uv_value) == "function" and env_data.solar_uv_value() or 0
+  local rad_value = type(env_data.solar_rad_value) == "function" and env_data.solar_rad_value() or 0
+  local aqi_value_spread = tonumber(cfg.aqi_value_spread) or 22
+  local aqi_value_y = tonumber(cfg.aqi_value_y) or 34
+  local aqi_value_font_pt = tonumber(cfg.aqi_value_font_pt) or 12
+  local aqi_value_center_x = inner_x + (meter_w / 2)
+  local solar_value_spread = tonumber(cfg.solar_value_spread) or 22
+  local solar_value_center_x = solar_x + (solar_w / 2)
+  local solar_value_y = (table_cfg.height / 2)
+
+  draw_env_meter(
+    cr,
+    theme,
+    inner_x,
+    inner_y,
+    meter_w,
+    table_cfg,
+    "AQI",
+    nil,
+    {
+      {
+        value = aqi_airnow_value,
+        max_value = 300,
+        value_center_x = aqi_value_center_x - aqi_value_spread,
+        value_y = aqi_value_y,
+        value_font_pt = aqi_value_font_pt,
+      },
+      {
+        value = aqi_owm_value,
+        max_value = tonumber(cfg.owm_aqi_bar_max) or 5,
+        value_center_x = aqi_value_center_x + aqi_value_spread,
+        value_y = aqi_value_y,
+        value_font_pt = aqi_value_font_pt,
+      },
+    },
+    "ANW",
+    "OWM"
+  )
+
+  draw_env_atmos_table(
+    cr,
+    theme,
+    center_x,
+    inner_y,
+    center_w,
+    table_cfg,
+    "POLLUTION",
+    type(env_data.pollution_rows) == "function" and env_data.pollution_rows() or {},
+    pollution_rows
+  )
+
+  draw_env_atmos_table(
+    cr,
+    theme,
+    center_x,
+    pollen_y,
+    center_w,
+    table_cfg,
+    "POLLEN",
+    type(env_data.pollen_rows) == "function" and env_data.pollen_rows() or {},
+    pollen_rows
+  )
+
+  draw_env_meter(
+    cr,
+    theme,
+    solar_x,
+    inner_y,
+    solar_w,
+    table_cfg,
+    "SOLAR",
+    nil,
+    {
+      {
+        value = uv_value,
+        max_value = 100,
+        value_center_x = solar_value_center_x - solar_value_spread,
+        value_y = solar_value_y,
+      },
+      {
+        value = rad_value,
+        max_value = 100,
+        value_center_x = solar_value_center_x + solar_value_spread,
+        value_y = solar_value_y,
+      },
+    },
+    "UV",
+    "RAD"
+  )
+end
+
 function M.draw(cr, theme, layout, panels, data)
   fill_rect(
     cr,
@@ -2439,6 +2740,7 @@ function M.draw(cr, theme, layout, panels, data)
   draw_wxr_content(cr, theme, layout, panels, data)
   draw_net_content(cr, theme, layout, panels, data)
   draw_orb_content(cr, theme, layout, panels, data)
+  draw_env_content(cr, theme, layout, panels, data)
 end
 
 return M

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import math
 import os
+import json
 import time
 from datetime import timezone
 
@@ -8,9 +9,8 @@ import ephem
 
 HOME = os.path.expanduser("~")
 SUITE_DIR = os.environ.get("CONKY_SUITE_DIR") or os.path.join(HOME, ".config", "conky", "gtex62-osa")
-CACHE_DIR = os.environ.get("CONKY_CACHE_DIR") or os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.join(HOME, ".cache")), "conky")
-SKY_VARS = os.path.join(CACHE_DIR, "sky.vars")
-OWM_VARS = os.path.join(SUITE_DIR, "legacy", "config", "owm.vars")
+CONFIG_ROOT = os.environ.get("GTEX62_CONFIG_DIR") or os.environ.get("GTEX62_CONKY_CONFIG_DIR") or os.path.join(HOME, ".config", "gtex62-core")
+CACHE_ROOT = os.environ.get("GTEX62_CACHE_DIR") or os.environ.get("GTEX62_CONKY_CACHE_DIR") or os.path.join(HOME, ".cache", "gtex62-core")
 
 
 def parse_vars(path):
@@ -24,25 +24,75 @@ def parse_vars(path):
                 if not line or "=" not in line:
                     continue
                 key, value = [part.strip() for part in line.split("=", 1)]
-                out[key] = value
+                out[key] = value.strip('"')
     except OSError:
         return out
     return out
 
 
+def parse_toml_location(path):
+    lat = None
+    lon = None
+    section = None
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            for raw in handle:
+                line = raw.split("#", 1)[0].strip()
+                if not line:
+                    continue
+                if line.startswith("[") and line.endswith("]"):
+                    section = line[1:-1].strip()
+                    continue
+                if section != "location" or "=" not in line:
+                    continue
+                key, value = [part.strip() for part in line.split("=", 1)]
+                value = value.strip('"')
+                if key == "lat":
+                    lat = float(value)
+                elif key == "lon":
+                    lon = float(value)
+    except (OSError, ValueError):
+        return None, None
+    return lat, lon
+
+
+def parse_shared_astro(path):
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        observer = data.get("observer") or {}
+        lat = observer.get("lat")
+        lon = observer.get("lon")
+        if lat is not None and lon is not None:
+            return float(lat), float(lon)
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        pass
+    return None, None
+
+
 def pick_lat_lon():
-    sky = parse_vars(SKY_VARS)
-    if "LAT" in sky and "LON" in sky:
-        return float(sky["LAT"]), float(sky["LON"])
-
-    owm = parse_vars(OWM_VARS)
-    if "LAT" in owm and "LON" in owm:
-        return float(owm["LAT"]), float(owm["LON"])
-
     lat = os.environ.get("LAT")
     lon = os.environ.get("LON")
     if lat and lon:
         return float(lat), float(lon)
+
+    suite_id = os.environ.get("GTEX62_SUITE_ID") or os.environ.get("GTEX62_CONKY_SUITE_ID") or "osa"
+    suite_toml = os.path.join(CONFIG_ROOT, "suites", f"{suite_id}.toml")
+    suite_cfg = parse_vars(suite_toml)
+    astro_profile = suite_cfg.get("astro", "home")
+
+    lat, lon = parse_shared_astro(os.path.join(CACHE_ROOT, "shared", "astro", astro_profile, "current.json"))
+    if lat is not None and lon is not None:
+        return lat, lon
+
+    lat, lon = parse_toml_location(os.path.join(CONFIG_ROOT, "profiles", "astro", f"{astro_profile}.toml"))
+    if lat is not None and lon is not None:
+        return lat, lon
+
+    weather_profile = suite_cfg.get("weather", "home")
+    lat, lon = parse_toml_location(os.path.join(CONFIG_ROOT, "profiles", "weather", f"{weather_profile}.toml"))
+    if lat is not None and lon is not None:
+        return lat, lon
 
     return None, None
 

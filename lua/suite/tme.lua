@@ -15,13 +15,12 @@ local function normalize_spaces(s)
 end
 
 local HOME = os.getenv("HOME") or ""
-local XDG_CACHE_HOME = os.getenv("XDG_CACHE_HOME") or (HOME .. "/.cache")
 local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
 local DEFAULT_ENGINE_CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
-local DEFAULT_EVENT_CACHE = (os.getenv("CONKY_CACHE_DIR") or (XDG_CACHE_HOME .. "/conky")) .. "/events_cache.txt"
 local DEFAULT_EXTRA_EVENTS = RUNTIME_ROOT .. "/state/events_extra.txt"
 
 local function read_file(path)
+  if not path or path == "" then return nil end
   local f = io.open(path, "r")
   if not f then return nil end
   local s = f:read("*a")
@@ -100,6 +99,10 @@ local function calendar_events_json_path()
   return calendar_shared_dir() .. "/events.json"
 end
 
+local function calendar_status_json_path()
+  return calendar_shared_dir() .. "/status.json"
+end
+
 local function time_current_json_path()
   return time_shared_dir() .. "/current.json"
 end
@@ -107,7 +110,7 @@ end
 local function event_cache_path()
   local profile = calendar_profile()
   local events = profile.events or {}
-  return events.cache_file or DEFAULT_EVENT_CACHE
+  return events.cache_file
 end
 
 local function extra_events_path()
@@ -151,6 +154,82 @@ local function parse_json_events(path, store)
     end
   end
   return true
+end
+
+local function parse_calendar_status(path)
+  local s = read_file(path)
+  if not s then
+    return nil
+  end
+
+  local out = command_output(string.format("jq -r '[.state, .note] | @tsv' %q 2>/dev/null", path))
+  if not out or out == "null" then
+    return nil
+  end
+
+  local state, note = out:match("^([^\t]*)\t(.*)$")
+  if not state then
+    return nil
+  end
+
+  return {
+    state = normalize_spaces(state),
+    note = normalize_spaces(note),
+  }
+end
+
+local function days_from_today(date_str)
+  local y, m, d = date_str:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)$")
+  if not y then return nil end
+
+  local now = os.date("*t")
+  local today = os.time { year = now.year, month = now.month, day = now.day, hour = 12 }
+  local event_day = os.time { year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 12 }
+  if not today or not event_day then return nil end
+
+  return math.floor((event_day - today) / 86400)
+end
+
+local function event_status_line()
+  local status = parse_calendar_status(calendar_status_json_path())
+  if status and status.state ~= "" and status.state ~= "ok" then
+    local note = status.note ~= "" and (" - " .. status.note) or ""
+    return string.upper("EVT // CAL " .. status.state .. note)
+  end
+
+  local store = {}
+  local loaded = parse_json_events(calendar_events_json_path(), store)
+  if not loaded then
+    parse_event_lines(event_cache_path(), store)
+    parse_event_lines(extra_events_path(), store)
+  end
+
+  local today_key = os.date("%Y-%m-%d")
+  local next_event = nil
+  for _, event in pairs(store) do
+    if event.date >= today_key and (not next_event or event.date < next_event.date or (event.date == next_event.date and event.name < next_event.name)) then
+      next_event = event
+    end
+  end
+
+  if not next_event then
+    if not loaded then
+      return "EVT // CAL CACHE MISSING"
+    end
+    return "EVT // NONE"
+  end
+
+  local y, m, d = next_event.date:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)$")
+  local month = y and string.upper(os.date("%b", os.time { year = tonumber(y), month = tonumber(m), day = tonumber(d) })) or next_event.date:sub(6, 7)
+  local delta = days_from_today(next_event.date)
+  local suffix = ""
+  if delta == 0 then
+    suffix = " TODAY"
+  elseif delta and delta > 0 then
+    suffix = string.format(" +%dD", delta)
+  end
+
+  return string.upper(string.format("EVT // %s %s %s%s", month, d or next_event.date, next_event.name, suffix))
 end
 
 local function days_in_month(y, m)
@@ -311,17 +390,20 @@ local function parse_time_local(path)
 end
 
 function M.status_lines()
+  local evt_line = event_status_line()
   local local_time = parse_time_local(time_current_json_path())
   if local_time then
     return {
       string.format("%s // %s", local_time.zone or "", local_time.time or ""),
       string.format("CAL // %s", local_time.date or ""),
+      evt_line,
     }
   end
 
   return {
     string.format("%s // %s", string.upper(os.date("%Z")), os.date("%H:%M:%S")),
     string.format("CAL // %s", string.upper(os.date("%a, %b %d, %Y"))),
+    evt_line,
   }
 end
 

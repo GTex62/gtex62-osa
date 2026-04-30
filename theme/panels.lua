@@ -141,6 +141,15 @@ local panels = {
     y = 978,
     width = 520,
     height = 360,
+    boxes = {
+      atmos = {
+        x = 16,
+        y = 88,
+        width = 488,
+        height = 256,
+        title_source = "atmos_box_title",
+      },
+    },
   },
 }
 

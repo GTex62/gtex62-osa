@@ -2,7 +2,6 @@ local M = {}
 
 local HOME = os.getenv("HOME") or ""
 local SUITE_DIR = os.getenv("CONKY_SUITE_DIR") or (HOME .. "/.config/conky/gtex62-osa")
-local CACHE_DIR = os.getenv("CONKY_CACHE_DIR") or ((os.getenv("XDG_CACHE_HOME") or (HOME .. "/.cache")) .. "/conky")
 local ENGINE_CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
 local SUITE_ID = os.getenv("GTEX62_SUITE_ID") or os.getenv("GTEX62_CONKY_SUITE_ID") or "osa"
 local SUITE_CACHE_DIR = string.format("%s/suites/%s/orb", ENGINE_CACHE_ROOT, SUITE_ID)
@@ -18,7 +17,6 @@ local BODY_ROWS = {
 }
 
 local DATA_CACHE = {
-  sky = { stamp = nil, data = {} },
   eph = { stamp = nil, data = {} },
 }
 local ORB_CACHE_TTL = tonumber(os.getenv("GTEX62_OSA_ORB_CACHE_TTL")) or 60
@@ -54,18 +52,6 @@ end
 
 local function minute_stamp()
   return math.floor(os.time() / 60)
-end
-
-local function sky_data()
-  local stamp = minute_stamp()
-  if DATA_CACHE.sky.stamp == stamp then
-    return DATA_CACHE.sky.data
-  end
-
-  local path = CACHE_DIR .. "/sky.vars"
-  DATA_CACHE.sky.data = read_keyvals(path)
-  DATA_CACHE.sky.stamp = stamp
-  return DATA_CACHE.sky.data
 end
 
 local function ephemeris_data()
@@ -148,15 +134,12 @@ local function has_body_payload(data)
 end
 
 local function status_block()
-  local sky = sky_data()
   local eph = ephemeris_data()
-  local sky_age = cache_age_seconds(sky.TS)
   local eph_age = cache_age_seconds(eph.TS)
 
-  local sky_ok = has_body_payload(sky) and sky_age ~= nil and sky_age <= (ORB_CACHE_TTL * 3)
   local eph_ok = has_body_payload(eph) and eph_age ~= nil and eph_age <= (ORB_CACHE_TTL * 3)
 
-  local orbital_state = (sky_ok and eph_ok) and "NOMINAL" or "DEGRADED"
+  local orbital_state = eph_ok and "NOMINAL" or "DEGRADED"
   local ephemeris_state
 
   if not has_body_payload(eph) or eph_age == nil then
@@ -253,15 +236,15 @@ function M.legend_rows()
 end
 
 function M.celestial_rows()
-  local sky = sky_data()
   local eph = ephemeris_data()
+  local fallback = {}
   local rows = {}
 
   for _, row in ipairs(BODY_ROWS) do
     local key = row.key
-    local theta = pick_numeric(sky, eph, key .. "_THETA")
-    local alt = pick_numeric(sky, eph, key .. "_ALT")
-    local rise_ts, set_ts = pick_today_rise_set(sky, eph, key)
+    local theta = pick_numeric(eph, fallback, key .. "_THETA")
+    local alt = pick_numeric(eph, fallback, key .. "_ALT")
+    local rise_ts, set_ts = pick_today_rise_set(eph, fallback, key)
 
     local data_text
     if key == "SUN" or key == "MOON" then

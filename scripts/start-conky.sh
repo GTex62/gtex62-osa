@@ -5,24 +5,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUITE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RUNTIME_ROOT="${GTEX62_CONFIG_DIR:-${GTEX62_CONKY_CONFIG_DIR:-$HOME/.config/gtex62-core}}"
 CACHE_ROOT="${GTEX62_CACHE_DIR:-${GTEX62_CONKY_CACHE_DIR:-$HOME/.cache/gtex62-core}}"
-CORE_REPO="${GTEX62_CORE_DIR:-${GTEX62_CONKY_ENGINE_REPO:-$HOME/.config/conky/gtex62-core}}"
+CORE_REPO="${GTEX62_CORE_DIR:-${GTEX62_CONKY_ENGINE_DIR:-$HOME/.config/conky/gtex62-core}}"
 CORE_LAUNCHER="${GTEX62_CORE_LAUNCHER:-${GTEX62_CONKY_LAUNCHER:-$CORE_REPO/bin/gtex62-core-launch}}"
 SHARED_ASSETS_ROOT="${GTEX62_SHARED_ASSETS:-${GTEX62_CONKY_SHARED_ASSETS:-$HOME/.config/conky/gtex62-shared-assets}}"
 WALLPAPER_DIR="${GTEX62_WALLPAPERS_DIR:-${GTEX62_CONKY_WALLPAPERS_DIR:-$SHARED_ASSETS_ROOT/wallpapers}}"
-
-if [[ -z "${GTEX62_CONFIG_DIR:-}" && -z "${GTEX62_CONKY_CONFIG_DIR:-}" && ! -e "$RUNTIME_ROOT" && -e "$HOME/.config/gtex62-conky" ]]; then
-  RUNTIME_ROOT="$HOME/.config/gtex62-conky"
-fi
-
-if [[ -z "${GTEX62_CACHE_DIR:-}" && -z "${GTEX62_CONKY_CACHE_DIR:-}" && ! -e "$CACHE_ROOT" && -e "$HOME/.cache/gtex62-conky" ]]; then
-  CACHE_ROOT="$HOME/.cache/gtex62-conky"
-fi
 
 export CONKY_SUITE_DIR="$SUITE_DIR"
 export GTEX62_CONFIG_DIR="$RUNTIME_ROOT"
 export GTEX62_CACHE_DIR="$CACHE_ROOT"
 export GTEX62_SUITE_ID="osa"
 export GTEX62_SHARED_ASSETS="$SHARED_ASSETS_ROOT"
+export GTEX62_SHARED_ASSETS_DIR="$SHARED_ASSETS_ROOT"
 export GTEX62_WALLPAPERS_DIR="$WALLPAPER_DIR"
 export GTEX62_CONKY_CONFIG_DIR="$RUNTIME_ROOT"
 export GTEX62_CONKY_CACHE_DIR="$CACHE_ROOT"
@@ -30,7 +23,42 @@ export GTEX62_CONKY_SUITE_ID="osa"
 export GTEX62_CONKY_SHARED_ASSETS="$SHARED_ASSETS_ROOT"
 export GTEX62_CONKY_WALLPAPERS_DIR="$WALLPAPER_DIR"
 
+if [[ ! -f "$RUNTIME_ROOT/core.toml" || ! -f "$RUNTIME_ROOT/suites/osa.toml" ]]; then
+  "$SUITE_DIR/scripts/bootstrap-runtime-root.sh" "$RUNTIME_ROOT" >/dev/null
+fi
+
+PIDS_DIR="$CACHE_ROOT/runtime/pids"
+LAUNCHER_PID_FILE="$PIDS_DIR/osa-launcher.pid"
+CONKY_PID_FILE="$PIDS_DIR/osa-conky.pid"
+
+stop_pid_file() {
+  local file="$1"
+  local pid=""
+  [[ -f "$file" ]] || return 0
+  pid="$(cat "$file" 2>/dev/null || true)"
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true
+  fi
+}
+
+wait_pid_file_exit() {
+  local file="$1"
+  local pid=""
+  local i
+  [[ -f "$file" ]] || return 0
+  pid="$(cat "$file" 2>/dev/null || true)"
+  [[ -n "$pid" ]] || return 0
+  for i in {1..30}; do
+    kill -0 "$pid" 2>/dev/null || return 0
+    sleep 0.1
+  done
+}
+
+stop_pid_file "$LAUNCHER_PID_FILE"
+stop_pid_file "$CONKY_PID_FILE"
 pkill -x conky 2>/dev/null || true
+wait_pid_file_exit "$LAUNCHER_PID_FILE"
+wait_pid_file_exit "$CONKY_PID_FILE"
 
 choose_wallpaper() {
   local cache_dir="$CACHE_ROOT/runtime"
@@ -102,17 +130,13 @@ choose_wallpaper() {
 
 choose_wallpaper
 
-if [[ ! -x "$CORE_LAUNCHER" && -x "$CORE_REPO/bin/gtex62-conky-launch" ]]; then
-  CORE_LAUNCHER="$CORE_REPO/bin/gtex62-conky-launch"
-fi
-
-if [[ ! -x "$CORE_LAUNCHER" && -x "$HOME/.config/conky/gtex62-conky-engine/bin/gtex62-conky-launch" ]]; then
-  CORE_LAUNCHER="$HOME/.config/conky/gtex62-conky-engine/bin/gtex62-conky-launch"
-fi
-
 if [[ -x "$CORE_LAUNCHER" ]]; then
-  nohup "$CORE_LAUNCHER" --suite osa >/dev/null 2>&1 &
-  disown || true
+  if command -v setsid >/dev/null 2>&1; then
+    setsid -f "$CORE_LAUNCHER" --suite osa >/dev/null 2>&1
+  else
+    nohup "$CORE_LAUNCHER" --suite osa >/dev/null 2>&1 &
+    disown || true
+  fi
   exit 0
 fi
 

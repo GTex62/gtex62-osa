@@ -14,6 +14,18 @@ local GPU_STATS_CACHE = {
   data = nil,
 }
 
+local CPU_TEMP_CACHE = {
+  tick = nil,
+  value = nil,
+}
+
+local PROCESS_ROWS_CACHE = {
+  tick = nil,
+  rows = nil,
+  max_rows = nil,
+  max_chars = nil,
+}
+
 local STORAGE_SPECS = {
   { label = "/ROOT", kind = "fs", path = "/" },
   { label = "/SWAP", kind = "swap", path = "swap" },
@@ -21,6 +33,10 @@ local STORAGE_SPECS = {
   { label = "/NAS", kind = "mount", path = "/mnt/NAS_Data" },
   { label = "/WD", kind = "mount", path = os.getenv("WD_BLACK_PATH") or "/mnt/WD_Black" },
 }
+
+local read_gpu_stats
+local fallback_cpu_temp_celsius
+local fallback_gpu_temp_celsius
 
 local function read_file(path)
   local f = io.open(path, "r")
@@ -49,7 +65,7 @@ local function normalize_spaces(s)
 end
 
 local function second_stamp()
-  return os.time()
+  return math.floor(os.time() / 5)
 end
 
 local function parse_simple_toml(path)
@@ -144,6 +160,80 @@ end
 
 local function json_number(paths, filter)
   return tonumber(json_query(paths, filter))
+end
+
+local function storage_fault_line(paths)
+  local out = json_query(paths, [[
+    def rows:
+      .storage.filesystems // .filesystems // .storage.mounts // .mounts // .storage.disks // .disks // [];
+    rows
+    | if type == "array" then .[] else empty end
+    | select((.label // .disk // "") == "/NAS" or (.label // .disk // "") == "/WD")
+    | select(((.size_bytes // .bytes_total // .total_bytes // .size // 0) | tonumber) <= 0)
+    | (.label // .disk // .mount // .mount_point // .path // "DISK")
+  ]])
+
+  if out then
+    local label = out:match("([^\r\n]+)") or out
+    label = normalize_spaces(label)
+    if label ~= "" then
+      return string.format("DISK // %s OFFLINE", label)
+    end
+  end
+
+  return nil
+end
+
+local function gpu_tool_fault_line()
+  local has_nvidia = command_output("lspci 2>/dev/null | grep -qi nvidia && echo yes")
+  if not has_nvidia then
+    return nil
+  end
+
+  local has_smi = command_output("command -v nvidia-smi >/dev/null 2>&1 && echo yes")
+  if not has_smi then
+    return "GPU // NVIDIA-SMI MISSING"
+  end
+
+  if not read_gpu_stats() then
+    return "GPU // NVIDIA-SMI FAULT"
+  end
+
+  return nil
+end
+
+local function temp_fault_line(cpu_temp, gpu_temp)
+  local cpu = tonumber(cpu_temp)
+  local gpu = tonumber(gpu_temp)
+
+  if cpu and cpu >= 90 then
+    return string.format("TEMP // CPU %03dC HIGH", math.floor(cpu + 0.5))
+  end
+
+  if gpu and gpu >= 85 then
+    return string.format("TEMP // GPU %03dC HIGH", math.floor(gpu + 0.5))
+  end
+
+  return nil
+end
+
+local function provider_fault_line(paths)
+  local out = json_query(paths, "[.state, .note] | @tsv")
+  if not out then
+    return nil
+  end
+
+  local state, note = out:match("^([^\t]*)\t(.*)$")
+  state = normalize_spaces(state)
+  note = normalize_spaces(note)
+  if state == "" or state == "ok" then
+    return nil
+  end
+
+  if note ~= "" then
+    return string.upper("SYS // " .. state .. " - " .. note)
+  end
+  return string.upper("SYS // " .. state)
 end
 
 local function human_size(bytes)
@@ -345,8 +435,8 @@ local function read_gpu_model()
   return lspci:match(": .-$")
 end
 
-local function read_gpu_stats()
-  local now = os.time()
+read_gpu_stats = function()
+  local now = math.floor(os.time() / 2)
   if GPU_STATS_CACHE.tick == now and GPU_STATS_CACHE.data ~= nil then
     return GPU_STATS_CACHE.data
   end
@@ -449,11 +539,13 @@ local function fallback_status_lines()
   local kernel = command_output("uname -r") or "UNKNOWN"
   kernel = kernel:gsub("%-generic$", "-G")
   local uptime = format_hms(read_uptime_seconds())
+  local condition = temp_fault_line(fallback_cpu_temp_celsius(), fallback_gpu_temp_celsius())
+    or gpu_tool_fault_line()
 
   return {
     "OS LM // " .. codename .. " " .. version,
     "KERNEL // " .. kernel,
-    "UPTIME // " .. uptime,
+    condition or ("UPTIME // " .. uptime),
   }
 end
 
@@ -477,7 +569,13 @@ local function fallback_ram_usage_percent()
   return nil
 end
 
-local function fallback_cpu_temp_celsius()
+fallback_cpu_temp_celsius = function()
+  local now = math.floor(os.time() / 2)
+  if CPU_TEMP_CACHE.tick == now then
+    return CPU_TEMP_CACHE.value
+  end
+
+  local value = nil
   local sensors = command_output("sensors 2>/dev/null")
   if sensors then
     local core_sum = 0
@@ -492,7 +590,10 @@ local function fallback_cpu_temp_celsius()
     end
 
     if core_count > 0 then
-      return core_sum / core_count
+      value = core_sum / core_count
+      CPU_TEMP_CACHE.tick = now
+      CPU_TEMP_CACHE.value = value
+      return value
     end
 
     for _, pattern in ipairs({
@@ -503,18 +604,25 @@ local function fallback_cpu_temp_celsius()
     }) do
       local match = sensors:match(pattern)
       if match then
-        return tonumber(match)
+        value = tonumber(match)
+        CPU_TEMP_CACHE.tick = now
+        CPU_TEMP_CACHE.value = value
+        return value
       end
     end
   end
 
   if type(conky_parse) == "function" then
-    local value = tonumber((conky_parse("${hwmon temp 1}") or ""):match("(%d+%.?%d*)"))
+    value = tonumber((conky_parse("${hwmon temp 1}") or ""):match("(%d+%.?%d*)"))
     if value ~= nil then
+      CPU_TEMP_CACHE.tick = now
+      CPU_TEMP_CACHE.value = value
       return value
     end
   end
 
+  CPU_TEMP_CACHE.tick = now
+  CPU_TEMP_CACHE.value = nil
   return nil
 end
 
@@ -531,7 +639,7 @@ local function fallback_gpu_vram_percent()
   return (stats.mem_used * 100) / stats.mem_total
 end
 
-local function fallback_gpu_temp_celsius()
+fallback_gpu_temp_celsius = function()
   local stats = read_gpu_stats()
   return stats and stats.temp or nil
 end
@@ -759,6 +867,10 @@ local function build_shared_snapshot()
   local kernel = json_query(json_paths, ".kernel.release // .kernel.version // .os.kernel // empty")
   local uptime_seconds = json_number(json_paths, ".uptime_seconds // .uptime.seconds // .system.uptime_seconds // empty")
   local uptime_text = json_query(json_paths, ".uptime_display // .uptime.display // empty")
+  local condition = provider_fault_line({ paths.status })
+    or storage_fault_line(storage_paths)
+    or temp_fault_line(snapshot.cpu_temp_celsius or fallback_cpu_temp_celsius(), snapshot.gpu_temp_celsius or fallback_gpu_temp_celsius())
+    or gpu_tool_fault_line()
 
   local os_label
   if codename or version then
@@ -776,7 +888,7 @@ local function build_shared_snapshot()
   snapshot.status_lines = {
     "OS LM // " .. os_label,
     "KERNEL // " .. normalize_spaces(kernel or "UNKNOWN"),
-    "UPTIME // " .. normalize_spaces(uptime_text or format_hms(uptime_seconds)),
+    condition or ("UPTIME // " .. normalize_spaces(uptime_text or format_hms(uptime_seconds))),
   }
 
   snapshot.process_rows = decode_process_rows(process_paths)
@@ -896,7 +1008,20 @@ end
 function M.process_rows(max_rows, max_chars)
   local target_rows = tonumber(max_rows) or 6
   local max_len = tonumber(max_chars) or 18
-  return fallback_process_rows(target_rows, max_len)
+  local tick = math.floor(os.time() / 3)
+
+  if PROCESS_ROWS_CACHE.tick == tick
+    and PROCESS_ROWS_CACHE.rows ~= nil
+    and PROCESS_ROWS_CACHE.max_rows == target_rows
+    and PROCESS_ROWS_CACHE.max_chars == max_len then
+    return PROCESS_ROWS_CACHE.rows
+  end
+
+  PROCESS_ROWS_CACHE.tick = tick
+  PROCESS_ROWS_CACHE.max_rows = target_rows
+  PROCESS_ROWS_CACHE.max_chars = max_len
+  PROCESS_ROWS_CACHE.rows = fallback_process_rows(target_rows, max_len)
+  return PROCESS_ROWS_CACHE.rows
 end
 
 return M

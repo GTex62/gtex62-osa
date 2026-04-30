@@ -3,6 +3,8 @@ local HOME = os.getenv("HOME") or ""
 local SUITE_ID = os.getenv("GTEX62_SUITE_ID") or os.getenv("GTEX62_CONKY_SUITE_ID") or "osa"
 local CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
 local NET_CACHE_DIR = string.format("%s/suites/%s/net", CACHE_ROOT, SUITE_ID)
+local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
+local CORE_DIR = os.getenv("GTEX62_CORE_DIR") or os.getenv("GTEX62_CONKY_ENGINE_DIR") or (HOME .. "/.config/conky/gtex62-core")
 
 local CACHE = {
   tick = nil,
@@ -67,6 +69,46 @@ local function read_tsv_rows(path)
   return rows
 end
 
+local function parse_simple_toml(path)
+  local out = {}
+  local section = nil
+  local s = read_file(path)
+  if not s then return out end
+
+  for line in s:gmatch("[^\r\n]+") do
+    line = line:gsub("#.*$", ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if line ~= "" then
+      local sec = line:match("^%[([%w_%-]+)%]$")
+      if sec then
+        section = sec
+        out[section] = out[section] or {}
+      else
+        local key, value = line:match("^([%w_%-]+)%s*=%s*(.+)$")
+        if key and value then
+          value = value:gsub('^"', ""):gsub('"$', "")
+          if section then
+            out[section][key] = value
+          else
+            out[key] = value
+          end
+        end
+      end
+    end
+  end
+
+  return out
+end
+
+local function connectivity_profile_id()
+  local cfg = parse_simple_toml(RUNTIME_ROOT .. "/suites/" .. SUITE_ID .. ".toml")
+  return ((cfg.profiles or {}).connectivity) or "default"
+end
+
+local function json_query(path, filter)
+  if not read_file(path) then return nil end
+  return command_output(string.format("jq -r %q %q 2>/dev/null", filter, path))
+end
+
 local function second_stamp()
   return os.time()
 end
@@ -99,8 +141,16 @@ local function parse_ping_ms(host)
 end
 
 local function speedtest_pair()
-  local suite_dir = os.getenv("CONKY_SUITE_DIR") or ((os.getenv("HOME") or "") .. "/.config/conky/gtex62-osa")
-  local out = command_output(string.format("%q bars 500 0 2>/dev/null", suite_dir .. "/scripts/speedtest_snapshot.sh"))
+  local path = string.format("%s/shared/connectivity/%s/current.json", CACHE_ROOT, connectivity_profile_id())
+  local out = json_query(path, '[.speedtest.display_down_mbps // .speedtest.download_mbps // 500, .speedtest.upload_mbps // 0] | @tsv')
+  if out then
+    local down, up = out:match("^([^\t]+)\t([^\t]+)$")
+    if down then
+      return tonumber(down) or 500, tonumber(up) or 0
+    end
+  end
+
+  local out = command_output(string.format("%q bars 500 0 2>/dev/null", CORE_DIR .. "/providers/connectivity/speedtest_snapshot.sh"))
   if not out then
     return 500, 0
   end
@@ -166,10 +216,23 @@ end
 function M.net_status_lines()
   local status = normalize_spaces(tostring(cached_value("STATUS", "OFFLINE"))):upper()
   local speed = tostring(cached_value("SPEEDTEST_DOWN", "500"))
+  local speed_age = tostring(cached_value("SPEEDTEST_AGE", cached_value("SPEEDTEST_DAYS", "--:--")))
+  local speed_delta = tostring(cached_value("SPEEDTEST_DELTA", "---"))
+  local ssh_tripped = tostring(cached_value("SSH_TRIPPED", "0"))
+  local speed_line = string.format("%s | %s | %s", speed, speed_age, speed_delta)
+
+  if ssh_tripped == "1" then
+    local reason = normalize_spaces(tostring(cached_value("SSH_REASON", "PF_SSH_FAIL")))
+    local left = normalize_spaces(tostring(cached_value("SSH_LEFT", "0")))
+    return {
+      string.format("SSH PAUSED - %s - %ss", reason ~= "" and reason or "PF_SSH_FAIL", left ~= "" and left or "0"),
+      "GONION NETWORK // " .. status,
+    }
+  end
 
   return {
     "GONION NETWORK // " .. status,
-    "SPEEDTEST // " .. speed,
+    "SPEEDTEST // " .. speed_line,
   }
 end
 
