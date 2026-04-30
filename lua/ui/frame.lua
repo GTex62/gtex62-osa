@@ -451,6 +451,32 @@ local function draw_meter_value_center(cr, x, y, value, font_pt, color, theme)
   )
 end
 
+local function draw_meter_text_center(cr, x, y, text, font_pt, color, theme)
+  draw_text_center_mid(
+    cr,
+    x,
+    y,
+    tostring(text or ""),
+    theme.fonts.data,
+    font_pt,
+    color,
+    CAIRO_FONT_WEIGHT_NORMAL
+  )
+end
+
+local function draw_meter_text(cr, x, y, text, font_pt, color, theme)
+  draw_text_left_mid(
+    cr,
+    x,
+    y,
+    tostring(text or ""),
+    theme.fonts.data,
+    font_pt,
+    color,
+    CAIRO_FONT_WEIGHT_NORMAL
+  )
+end
+
 local function draw_meter_bar(cr, x, y_top, y_bottom, value, max_value, width, color)
   local numeric = tonumber(value) or 0
   local max_v = tonumber(max_value) or 100
@@ -550,26 +576,51 @@ local function draw_env_meter(cr, theme, x, y, w, cfg, label, value, bar_specs, 
       if spec.show_value ~= false then
         local font_pt = tonumber(spec.value_font_pt) or tonumber(cfg.meter_value_font_pt) or 20
         local text_y = y + (tonumber(spec.value_y) or value_y)
+        local value_text = spec.value_text
         if spec.value_center_x then
-          draw_meter_value_center(
-            cr,
-            tonumber(spec.value_center_x) or (bar_x + (bar_w / 2)),
-            text_y,
-            spec.value,
-            font_pt,
-            theme.colors.fg,
-            theme
-          )
+          if value_text ~= nil then
+            draw_meter_text_center(
+              cr,
+              tonumber(spec.value_center_x) or (bar_x + (bar_w / 2)),
+              text_y,
+              value_text,
+              font_pt,
+              theme.colors.fg,
+              theme
+            )
+          else
+            draw_meter_value_center(
+              cr,
+              tonumber(spec.value_center_x) or (bar_x + (bar_w / 2)),
+              text_y,
+              spec.value,
+              font_pt,
+              theme.colors.fg,
+              theme
+            )
+          end
         else
-          draw_meter_value(
-            cr,
-            tonumber(spec.value_x) or (bar_x - 10),
-            text_y,
-            spec.value,
-            font_pt,
-            theme.colors.fg,
-            theme
-          )
+          if value_text ~= nil then
+            draw_meter_text(
+              cr,
+              tonumber(spec.value_x) or (bar_x - 10),
+              text_y,
+              value_text,
+              font_pt,
+              theme.colors.fg,
+              theme
+            )
+          else
+            draw_meter_value(
+              cr,
+              tonumber(spec.value_x) or (bar_x - 10),
+              text_y,
+              spec.value,
+              font_pt,
+              theme.colors.fg,
+              theme
+            )
+          end
         end
       end
     end
@@ -2603,6 +2654,8 @@ local function draw_env_content(cr, theme, layout, panels, data)
   local aqi_owm_value = type(env_data.aqi_owm_value) == "function" and env_data.aqi_owm_value() or 0
   local uv_value = type(env_data.solar_uv_value) == "function" and env_data.solar_uv_value() or 0
   local rad_value = type(env_data.solar_rad_value) == "function" and env_data.solar_rad_value() or 0
+  local uv_text = type(env_data.solar_uv_text) == "function" and env_data.solar_uv_text() or tostring(uv_value)
+  local rad_text = type(env_data.solar_rad_text) == "function" and env_data.solar_rad_text() or tostring(rad_value)
   local aqi_value_spread = tonumber(cfg.aqi_value_spread) or 22
   local aqi_value_y = tonumber(cfg.aqi_value_y) or 34
   local aqi_value_font_pt = tonumber(cfg.aqi_value_font_pt) or 12
@@ -2676,12 +2729,14 @@ local function draw_env_content(cr, theme, layout, panels, data)
     {
       {
         value = uv_value,
+        value_text = uv_text,
         max_value = 100,
         value_center_x = solar_value_center_x - solar_value_spread,
         value_y = solar_value_y,
       },
       {
         value = rad_value,
+        value_text = rad_text,
         max_value = 100,
         value_center_x = solar_value_center_x + solar_value_spread,
         value_y = solar_value_y,

@@ -18,6 +18,7 @@ local HOME = os.getenv("HOME") or ""
 local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
 local DEFAULT_ENGINE_CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
 local DEFAULT_EXTRA_EVENTS = RUNTIME_ROOT .. "/state/events_extra.txt"
+local SUN_EVENT_LOOKAHEAD_SECONDS = 3600
 
 local function read_file(path)
   if not path or path == "" then return nil end
@@ -83,8 +84,16 @@ local function calendar_profile_id()
   return ((suite_config().profiles or {}).calendar) or "local"
 end
 
+local function astro_profile_id()
+  return ((suite_config().profiles or {}).astro) or "home"
+end
+
 local function calendar_shared_dir()
   return string.format("%s/shared/calendar/%s", engine_cache_root(), calendar_profile_id())
+end
+
+local function astro_shared_dir()
+  return string.format("%s/shared/astro/%s", engine_cache_root(), astro_profile_id())
 end
 
 local function time_profile_id()
@@ -101,6 +110,10 @@ end
 
 local function calendar_status_json_path()
   return calendar_shared_dir() .. "/status.json"
+end
+
+local function astro_current_json_path()
+  return astro_shared_dir() .. "/current.json"
 end
 
 local function time_current_json_path()
@@ -190,11 +203,61 @@ local function days_from_today(date_str)
   return math.floor((event_day - today) / 86400)
 end
 
+local function format_countdown(seconds)
+  seconds = math.max(0, math.floor(tonumber(seconds) or 0))
+  local hours = math.floor(seconds / 3600)
+  local minutes = math.floor((seconds % 3600) / 60)
+  return string.format("-%02d:%02d", hours, minutes)
+end
+
+local function sun_event_status_line()
+  local path = astro_current_json_path()
+  if not read_file(path) then
+    return nil
+  end
+
+  local out = command_output(string.format("jq -r '[.sun.next_rise_ts, .sun.next_set_ts] | @tsv' %q 2>/dev/null", path))
+  if not out then
+    return nil
+  end
+
+  local rise_text, set_text = out:match("^([^\t]*)\t([^\t]*)$")
+  local now = os.time()
+  local candidates = {
+    { label = "SUNRISE", ts = tonumber(rise_text) },
+    { label = "SUNSET", ts = tonumber(set_text) },
+  }
+
+  local next_event = nil
+  for _, candidate in ipairs(candidates) do
+    if candidate.ts and candidate.ts > now then
+      local remaining = candidate.ts - now
+      if remaining <= SUN_EVENT_LOOKAHEAD_SECONDS and (not next_event or remaining < next_event.remaining) then
+        next_event = {
+          label = candidate.label,
+          remaining = remaining,
+        }
+      end
+    end
+  end
+
+  if not next_event then
+    return nil
+  end
+
+  return string.format("EVT // %s IN %s", next_event.label, format_countdown(next_event.remaining))
+end
+
 local function event_status_line()
   local status = parse_calendar_status(calendar_status_json_path())
   if status and status.state ~= "" and status.state ~= "ok" then
     local note = status.note ~= "" and (" - " .. status.note) or ""
     return string.upper("EVT // CAL " .. status.state .. note)
+  end
+
+  local sun_line = sun_event_status_line()
+  if sun_line then
+    return sun_line
   end
 
   local store = {}

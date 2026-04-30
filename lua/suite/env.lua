@@ -222,6 +222,11 @@ local function round_int(value)
   return math.floor(n + 0.5)
 end
 
+local function format_decimal(value, decimals)
+  local n = tonumber(value) or 0
+  return string.format("%." .. tostring(decimals or 0) .. "f", n)
+end
+
 local function owm_aqi_to_airnow(aqi)
   local n = tonumber(aqi)
   if not n then return 0 end
@@ -309,11 +314,15 @@ local function read_solar()
   local out = command_output(string.format([[
 jq -r '[
   (.norm.UV // .normalized.UV // .values.UV // ""),
-  (.norm.RAD // .normalized.RAD // .values.RAD // "")
+  (.norm.RAD // .normalized.RAD // .values.RAD // ""),
+  (.values.UV // ""),
+  (.values.RAD // "")
 ] | @tsv' %q 2>/dev/null]], path))
   local fields = parse_tsv(out)
   local uv = field_number(fields, 1)
   local rad = field_number(fields, 2)
+  local uv_value = field_number(fields, 3)
+  local rad_value = field_number(fields, 4)
 
   if uv and uv <= 1 then uv = uv * 100 end
   if rad and rad <= 1 then rad = rad * 100 end
@@ -328,6 +337,8 @@ jq -r '[
       or (status_path and json_timestamp(status_path, ".provider_updated_at // .generated_at // empty")),
     uv = uv,
     rad = rad,
+    uv_value = uv_value or uv,
+    rad_value = rad_value or rad,
   }
 end
 
@@ -473,6 +484,16 @@ end
 function M.solar_rad_value()
   refresh()
   return round_int((CACHE.solar or {}).rad or 0)
+end
+
+function M.solar_uv_text()
+  refresh()
+  return format_decimal((CACHE.solar or {}).uv_value or 0, 1)
+end
+
+function M.solar_rad_text()
+  refresh()
+  return string.format("%d", round_int((CACHE.solar or {}).rad_value or 0))
 end
 
 function M.pollution_rows()
