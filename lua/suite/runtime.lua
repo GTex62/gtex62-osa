@@ -9,11 +9,18 @@ local PATHS = {
   panels = SUITE_DIR .. "/theme/panels.lua",
 }
 
+local DEPENDENCIES = {
+  theme = {
+    SUITE_DIR .. "/theme/osa-palettes.lua",
+  },
+}
+
 local CACHE = {
   theme = nil,
   layout = nil,
   panels = nil,
   mtimes = {},
+  dependency_mtimes = {},
   last_check = nil,
 }
 
@@ -52,7 +59,21 @@ local function load_key(key)
   if value ~= nil then
     CACHE[key] = value
     CACHE.mtimes[key] = file_mtime(path)
+    CACHE.dependency_mtimes[key] = {}
+    for _, dependency_path in ipairs(DEPENDENCIES[key] or {}) do
+      CACHE.dependency_mtimes[key][dependency_path] = file_mtime(dependency_path)
+    end
   end
+end
+
+local function dependencies_changed(key)
+  for _, dependency_path in ipairs(DEPENDENCIES[key] or {}) do
+    local mtime = file_mtime(dependency_path)
+    if mtime ~= nil and mtime ~= ((CACHE.dependency_mtimes[key] or {})[dependency_path]) then
+      return true
+    end
+  end
+  return false
 end
 
 local function refresh_if_needed()
@@ -67,7 +88,7 @@ local function refresh_if_needed()
       load_key(key)
     else
       local mtime = file_mtime(path)
-      if mtime ~= nil and mtime ~= CACHE.mtimes[key] then
+      if (mtime ~= nil and mtime ~= CACHE.mtimes[key]) or dependencies_changed(key) then
         load_key(key)
       end
     end

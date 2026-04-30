@@ -267,6 +267,12 @@ Start with these files:
 - [widgets/osa-main.conky.conf](widgets/osa-main.conky.conf): Conky window and
   update interval.
 
+OSA supports a simple monochrome palette selector through `CONKY_OSA_PALETTE`.
+Available palettes are defined in [theme/osa-palettes.lua](theme/osa-palettes.lua);
+the default is `amber`.
+Generate the palette PDF with
+`../gtex62-core/scripts/generate_palette_pdf.py --suite osa`.
+
 Data customization belongs in `~/.config/gtex62-core/site.toml` unless the
 change is truly suite-specific.
 

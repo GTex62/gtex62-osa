@@ -19,3 +19,8 @@ shared_assets_dir = "../gtex62-shared-assets"
 fonts_dir = "../gtex62-shared-assets/fonts"
 icons_dir = "../gtex62-shared-assets/icons"
 wallpapers_dir = "../gtex62-shared-assets/wallpapers"
+
+[theme]
+default_palette = "amber"
+palette_catalog = "theme/osa-palettes.lua"
+palette_format = "role3"

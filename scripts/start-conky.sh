@@ -60,6 +60,92 @@ pkill -x conky 2>/dev/null || true
 wait_pid_file_exit "$LAUNCHER_PID_FILE"
 wait_pid_file_exit "$CONKY_PID_FILE"
 
+choose_palette() {
+  local palette_file="$SUITE_DIR/theme/osa-palettes.lua"
+  local cache_dir="$CACHE_ROOT/runtime"
+  local cache_last="$cache_dir/osa-palette"
+  local default_palette=""
+  local default_choice=""
+  local choice=""
+  local last=""
+
+  [[ -f "$palette_file" ]] || return 0
+
+  default_palette="$(
+    awk -F'"' '/default[[:space:]]*=/{print $2; exit}' "$palette_file"
+  )"
+  default_palette="${default_palette:-amber}"
+
+  local row=""
+  local group=""
+  local last_group=""
+  local -a PALETTE_ROWS=()
+  local -a PALETTE_GROUPS=()
+  local -a PALETTES=()
+
+  mapfile -t PALETTE_ROWS < <(
+    awk '
+      /^  palettes = \{/ { inside = 1; next }
+      inside && /^  }/ { exit }
+      inside && match($0, /^    --[[:space:]]*(.*)$/, m) { print "@GROUP@" m[1]; next }
+      inside && match($0, /^    ([a-z0-9_]+) = \{/, m) { print m[1] }
+    ' "$palette_file"
+  )
+
+  for row in "${PALETTE_ROWS[@]}"; do
+    if [[ "$row" == @GROUP@* ]]; then
+      group="${row#@GROUP@}"
+      continue
+    fi
+    PALETTES+=("$row")
+    PALETTE_GROUPS+=("$group")
+  done
+
+  [[ "${#PALETTES[@]}" -gt 0 ]] || return 0
+
+  mkdir -p "$cache_dir"
+
+  if [[ -f "$cache_last" ]]; then
+    last="$(cat "$cache_last" 2>/dev/null || true)"
+  fi
+
+  for i in "${!PALETTES[@]}"; do
+    if [[ "${PALETTES[$i]}" == "${last:-$default_palette}" ]]; then
+      default_choice="$((i + 1))"
+      break
+    fi
+  done
+
+  echo "OSA palettes:"
+  for i in "${!PALETTES[@]}"; do
+    local n="$((i + 1))"
+    if [[ "${PALETTE_GROUPS[$i]}" != "$last_group" ]]; then
+      last_group="${PALETTE_GROUPS[$i]}"
+      [[ -n "$last_group" ]] && printf "\n%s\n" "$last_group"
+    fi
+    if [[ "${PALETTES[$i]}" == "$default_palette" ]]; then
+      printf "%d) %s (default)\n" "$n" "${PALETTES[$i]}"
+    else
+      printf "%d) %s\n" "$n" "${PALETTES[$i]}"
+    fi
+  done
+
+  if [[ -n "$default_choice" ]]; then
+    read -rp "Select palette [1-${#PALETTES[@]}] (Enter=$default_choice): " choice
+    choice="${choice:-$default_choice}"
+  else
+    read -rp "Select palette [1-${#PALETTES[@]}]: " choice
+  fi
+
+  if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#PALETTES[@]} )); then
+    echo "Invalid selection."
+    exit 1
+  fi
+
+  export CONKY_OSA_PALETTE="${PALETTES[$((choice - 1))]}"
+  echo "$CONKY_OSA_PALETTE" > "$cache_last"
+}
+
 choose_wallpaper() {
   local cache_dir="$CACHE_ROOT/runtime"
   local cache_last="$cache_dir/osa-wallpaper"
@@ -128,6 +214,7 @@ choose_wallpaper() {
   fi
 }
 
+choose_palette
 choose_wallpaper
 
 if [[ -x "$CORE_LAUNCHER" ]]; then

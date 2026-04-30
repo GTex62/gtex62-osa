@@ -3,6 +3,8 @@ local HOME = os.getenv("HOME") or ""
 local CORE_DIR = os.getenv("GTEX62_CORE_DIR")
     or os.getenv("GTEX62_CONKY_ENGINE_DIR")
     or (HOME .. "/.config/conky/gtex62-core")
+local SUITE_DIR = os.getenv("CONKY_SUITE_DIR") or (HOME .. "/.config/conky/gtex62-osa")
+local palette_catalog = dofile(SUITE_DIR .. "/theme/osa-palettes.lua")
 
 local function load_engine_runtime()
   local ok, runtime = pcall(dofile, CORE_DIR .. "/lua/runtime/window.lua")
@@ -22,10 +24,26 @@ theme.screenshot = {
   wan_ip = "",
 }
 
+theme.default_palette = palette_catalog.default or "amber"
+theme.active_palette = os.getenv("CONKY_OSA_PALETTE") or theme.default_palette
+theme.palettes = palette_catalog.palettes or {}
+
+theme.palette = theme.palettes[theme.active_palette] or theme.palettes[theme.default_palette]
+theme.resolved_palette = theme.palette == theme.palettes[theme.active_palette]
+    and theme.active_palette
+    or theme.default_palette
+
 theme.colors = {
-  bg = { 0.0, 0.0, 0.0 },
-  fg = { 1.0, 1.0, 0.0 },
-  ink = { 0.0, 0.0, 0.0 },
+  bg = theme.palette.bg,
+  fg = theme.palette.fg,
+  ink = theme.palette.ink,
+}
+
+theme.roles = {
+  background = theme.colors.bg,
+  foreground = theme.colors.fg,
+  fill = theme.colors.fg,
+  inverse_text = theme.colors.ink,
 }
 
 theme.strokes = {
