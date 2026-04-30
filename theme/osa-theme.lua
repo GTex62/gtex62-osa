@@ -17,6 +17,11 @@ local engine_runtime = load_engine_runtime()
 -- Monitor selection (0 = primary, 1 = secondary)
 theme.monitor_head = 1
 
+-- Screenshot overrides. Leave blank for live data.
+theme.screenshot = {
+  wan_ip = "",
+}
+
 theme.colors = {
   bg = { 0.0, 0.0, 0.0 },
   fg = { 1.0, 1.0, 0.0 },

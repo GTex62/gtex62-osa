@@ -5,6 +5,7 @@ local CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACH
 local NET_CACHE_DIR = string.format("%s/suites/%s/net", CACHE_ROOT, SUITE_ID)
 local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
 local CORE_DIR = os.getenv("GTEX62_CORE_DIR") or os.getenv("GTEX62_CONKY_ENGINE_DIR") or (HOME .. "/.config/conky/gtex62-core")
+local SUITE_DIR = os.getenv("CONKY_SUITE_DIR") or (HOME .. "/.config/conky/gtex62-osa")
 
 local CACHE = {
   tick = nil,
@@ -24,6 +25,20 @@ end
 
 local function normalize_spaces(s)
   return (s or ""):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function screenshot_override(key)
+  local ok, theme = pcall(dofile, SUITE_DIR .. "/theme/osa-theme.lua")
+  if not ok or type(theme) ~= "table" then
+    return nil
+  end
+
+  local value = ((theme.screenshot or {})[key])
+  value = normalize_spaces(tostring(value or ""))
+  if value ~= "" then
+    return value
+  end
+  return nil
 end
 
 local function read_file(path)
@@ -269,8 +284,9 @@ function M.ping_8888_ms()
 end
 
 function M.net_node_rows()
+  local wan_ip = screenshot_override("wan_ip") or normalize_spaces(tostring(cached_value("WAN_IP", "-")))
   return {
-    { name = "WAN IP", value = normalize_spaces(tostring(cached_value("WAN_IP", "-"))) },
+    { name = "WAN IP", value = wan_ip },
     { name = "LAN IP", value = normalize_spaces(tostring(cached_value("LAN_IP", "-"))) },
     { name = "DNS", value = normalize_spaces(tostring(cached_value("DNS", "-"))) },
     { name = "SUBNET", value = normalize_spaces(tostring(cached_value("SUBNET", "-"))) },
