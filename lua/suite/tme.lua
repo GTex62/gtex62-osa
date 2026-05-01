@@ -197,7 +197,7 @@ local function days_from_today(date_str)
 
   local now = os.date("*t") --[[@as osdate]]
   local today = os.time { year = now.year, month = now.month, day = now.day, hour = 12 }
-  local event_day = os.time { year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 12 }
+  local event_day = os.time { year = y, month = m, day = d, hour = 12 }
   if not today or not event_day then return nil end
 
   return math.floor((event_day - today) / 86400)
