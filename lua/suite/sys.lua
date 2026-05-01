@@ -865,7 +865,6 @@ local function build_shared_snapshot()
   local os_name = json_query(json_paths, ".os.name // .os.pretty_name // .distribution.name // .distribution.pretty_name // empty")
   local kernel = json_query(json_paths, ".kernel.release // .kernel.version // .os.kernel // empty")
   local uptime_seconds = json_number(json_paths, ".uptime_seconds // .uptime.seconds // .system.uptime_seconds // empty")
-  local uptime_text = json_query(json_paths, ".uptime_display // .uptime.display // empty")
   local condition = provider_fault_line({ paths.status })
     or storage_fault_line(storage_paths)
     or temp_fault_line(snapshot.cpu_temp_celsius or fallback_cpu_temp_celsius(), snapshot.gpu_temp_celsius or fallback_gpu_temp_celsius())
@@ -887,7 +886,7 @@ local function build_shared_snapshot()
   snapshot.status_lines = {
     "OS LM // " .. os_label,
     "KERNEL // " .. normalize_spaces(kernel or "UNKNOWN"),
-    condition or ("UPTIME // " .. normalize_spaces(uptime_text or format_hms(uptime_seconds))),
+    condition or ("UPTIME // " .. format_hms(uptime_seconds)),
   }
 
   snapshot.process_rows = decode_process_rows(process_paths)
