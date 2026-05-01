@@ -12,7 +12,7 @@ This directory contains OSA-specific implementation notes and domain references.
 ## References
 
 - [METAR AO2 / RMK Practical Reference](METAR_AO2_RMK_REFERENCE.md)
-- `WEATHER_STATION_MODEL.pdf`
+- `weather_station_model.pdf`
 
 General core architecture and normalized schemas live in
 `../../gtex62-core/docs/`.

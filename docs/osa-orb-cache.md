@@ -56,8 +56,8 @@ Simple key/value text.
 Example:
 
 ```text
-LAT=35.033333
-LON=-89.983333
+LAT=35.0424
+LON=-89.9767
 TS=1776841117
 SUN_AZ=19.521
 SUN_ALT=-40.639
