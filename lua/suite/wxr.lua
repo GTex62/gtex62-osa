@@ -333,17 +333,17 @@ local function forecast_date_label(index, raw_date)
   local year = os.date("*t").year
   local y, m, d = text:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)")
   if y and m and d then
-    local ts = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 12 })
+    local ts = os.time({ year = y, month = m, day = d, hour = 12 })
     if ts then
-      return string.upper(os.date("%b %d", ts))
+      return string.upper(tostring(os.date("%b %d", ts)))
     end
   end
 
   m, d = text:match("^(%d%d)%.(%d%d)$")
   if m and d then
-    local ts = os.time({ year = year, month = tonumber(m), day = tonumber(d), hour = 12 })
+    local ts = os.time({ year = year, month = m, day = d, hour = 12 })
     if ts then
-      return string.upper(os.date("%b %d", ts))
+      return string.upper(tostring(os.date("%b %d", ts)))
     end
   end
 
@@ -358,7 +358,7 @@ local function forecast_date_label(index, raw_date)
     day = base.day + tonumber(index or 0),
     hour = 12,
   })
-  return string.upper(os.date("%b %d", ts))
+  return string.upper(tostring(os.date("%b %d", ts)))
 end
 
 local function forecast_glyphs(icon, cloud_percent, wx_id)
@@ -1045,7 +1045,7 @@ local function decode_forecast_rows()
       local row_index = tonumber(idx) or #rows
       local sky, wx = forecast_glyphs(icon, cloud, wx_id)
       rows[#rows + 1] = {
-        day = string.upper(day ~= "" and day or os.date("%a", os.time() + (row_index * 86400))),
+        day = string.upper(day ~= "" and day or tostring(os.date("%a", os.time() + (row_index * 86400)))),
         date = forecast_date_label(row_index, date),
         sky = sky,
         wx = wx,
