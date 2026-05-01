@@ -48,6 +48,86 @@ theme.roles = {
 
 theme.strokes = {
   line = 1,
+  frame = 8,
+  frame_alpha = 0.99,
+}
+
+theme.frame_shadow = {
+  enabled = true,
+  color = { 0.0, 0.0, 0.0 },
+  alpha_scale = 1.25,
+  sides = { 1, 1, 1, 1 },                -- top, right, bottom, left
+  side_alpha = { 1.0, 0.45, 0.45, 1.0 }, -- top, right, bottom, left
+  bands = {
+    { offset = 8.0,  width = 8.0, alpha = 0.40 },
+    { offset = 10.0, width = 8.0, alpha = 0.30 },
+    { offset = 12.0, width = 8.0, alpha = 0.20 },
+    { offset = 16.0, width = 8.0, alpha = 0.10 },
+  },
+}
+
+theme.frame_lights = {
+  enabled = "auto",
+  auto_bg_threshold = 0.70,
+  color_mode = "auto",
+  color_lift = 0.16,
+  color_warmth = { 0.06, 0.03, 0.00 },
+  radius_scale = 1.0,
+  radius_y_scale = 1.0,
+  alpha_scale = 1.0,
+  top_frame_y_offset = 18,
+  light_count = 6,
+  light_gap = 290,
+  lights = {
+    {
+      x = "center",
+      y = 10,
+      radius = 11.451,
+      radius_y = 6.972,
+      color = { 1.0, 0.90, 0.90 },
+      alpha = 0.7,
+    },
+    {
+      x = "center",
+      y = 22,
+      radius = 22.37,
+      radius_y = 7.465,
+      color = { 1.0, 0.89, 0.86 },
+      alpha = 0.12,
+    },
+    {
+      x = "center",
+      y = 24,
+      radius = 20.248,
+      radius_y = 9.704,
+      color = { 1.0, 0.88, 0.82 },
+      alpha = 0.22,
+    },
+    {
+      x = "center",
+      y = 26,
+      radius = 28.087,
+      radius_y = 12.69,
+      color = { 1.0, 0.86, 0.78 },
+      alpha = 0.20,
+    },
+    {
+      x = "center",
+      y = 28,
+      radius = 39.192,
+      radius_y = 16.423,
+      color = { 1.0, 0.84, 0.74 },
+      alpha = 0.16,
+    },
+    {
+      x = "center",
+      y = "top_frame",
+      radius = 53.561,
+      radius_y = 30.902,
+      color = { 1.0, 0.82, 0.70 },
+      alpha = 0.3,
+    },
+  },
 }
 
 theme.fonts = {

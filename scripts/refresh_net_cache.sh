@@ -73,6 +73,26 @@ normalize() {
   printf '%s' "${1:-}" | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
 }
 
+vpn_state() {
+  if command -v piactl >/dev/null 2>&1; then
+    case "$(piactl get connectionstate 2>/dev/null || true)" in
+      Connected) printf 'ON\n'; return ;;
+      *) printf 'OFF\n'; return ;;
+    esac
+  fi
+
+  if ip link show wg0 >/dev/null 2>&1 && ip addr show wg0 2>/dev/null | grep -q "inet "; then
+    printf 'ON\n'
+    return
+  fi
+  if ip link show tun0 >/dev/null 2>&1 && ip addr show tun0 2>/dev/null | grep -q "inet "; then
+    printf 'ON\n'
+    return
+  fi
+
+  printf 'UNKNOWN\n'
+}
+
 escape_value() {
   printf '%s' "${1:-}" | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
 }
@@ -157,12 +177,12 @@ SPEEDTEST_AGE="$(json_value "$CONNECTIVITY_JSON" '
       else
         (($sec / 86400) | floor | zpad) + "d"
       end;
-  if .speedtest.age_label then
-    .speedtest.age_label
+  if (.speedtest.raw.timestamp // .speedtest.raw.result.timestamp // .speedtest.raw.result.date // null) != null then
+    ((now - ((.speedtest.raw.timestamp // .speedtest.raw.result.timestamp // .speedtest.raw.result.date) | fromdateiso8601)) | if . < 0 then 0 else . end | agefmt(.))
   elif .speedtest.age_seconds != null then
     agefmt(.speedtest.age_seconds)
-  elif (.speedtest.raw.timestamp // .speedtest.raw.result.timestamp // .speedtest.raw.result.date // null) != null then
-    ((now - ((.speedtest.raw.timestamp // .speedtest.raw.result.timestamp // .speedtest.raw.result.date) | fromdateiso8601)) | if . < 0 then 0 else . end | agefmt(.))
+  elif .speedtest.age_label then
+    .speedtest.age_label
   elif .speedtest.age_days != null then
     (.speedtest.age_days | tonumber | floor | zpad) + "d"
   else
@@ -185,6 +205,7 @@ fi
 
 WAN_IP="$(normalize "$(json_value "$NETWORK_JSON" '.interface.wan_ip // empty')")"
 WAN_IP="${WAN_IP:-$(normalize "$("$HELPER" wan_ip "$IFACE" 2>/dev/null || true)")}"
+VPN_STATE="$(normalize "$(vpn_state)")"
 LAN_IP="$(normalize "$(json_value "$NETWORK_JSON" '.interface.lan_ip // empty')")"
 LAN_IP="${LAN_IP:-$(normalize "$(ip -o -4 addr show dev "$IFACE" 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1)")}"
 DNS="$(normalize "$(json_value "$NETWORK_JSON" '.interface.dns // empty')")"
@@ -224,6 +245,7 @@ SSH_LEFT="${PFSENSE_LEFT:-$SSH_LEFT}"
   printf 'SPEEDTEST_AGE=%s\n' "$(escape_value "$SPEEDTEST_AGE")"
   printf 'SPEEDTEST_DELTA=%s\n' "$(escape_value "$SPEEDTEST_DELTA")"
   printf 'WAN_IP=%s\n' "$(escape_value "${WAN_IP:--}")"
+  printf 'VPN_STATE=%s\n' "$(escape_value "${VPN_STATE:-UNKNOWN}")"
   printf 'LAN_IP=%s\n' "$(escape_value "${LAN_IP:--}")"
   printf 'DNS=%s\n' "$(escape_value "${DNS:--}")"
   printf 'SUBNET=%s\n' "$(escape_value "${SUBNET:--}")"

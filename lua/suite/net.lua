@@ -285,8 +285,9 @@ end
 
 function M.net_node_rows()
   local wan_ip = screenshot_override("wan_ip") or normalize_spaces(tostring(cached_value("WAN_IP", "-")))
+  local wan_label = normalize_spaces(tostring(cached_value("VPN_STATE", "UNKNOWN"))) == "ON" and "VPN IP" or "WAN IP"
   return {
-    { name = "WAN IP", value = wan_ip },
+    { name = wan_label, value = wan_ip },
     { name = "LAN IP", value = normalize_spaces(tostring(cached_value("LAN_IP", "-"))) },
     { name = "DNS", value = normalize_spaces(tostring(cached_value("DNS", "-"))) },
     { name = "SUBNET", value = normalize_spaces(tostring(cached_value("SUBNET", "-"))) },
