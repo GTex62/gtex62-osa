@@ -3,14 +3,14 @@ require "cairo"
 local HOME = os.getenv("HOME") or ""
 local SUITE_DIR = os.getenv("CONKY_SUITE_DIR") or (HOME .. "/.config/conky/gtex62-osa")
 
-local runtime = nil
-local frame = nil
-local sys = nil
-local tme = nil
-local wxr = nil
-local net = nil
-local orb = nil
-local env = nil
+local runtime ---@type any
+local frame   ---@type any
+local sys     ---@type any
+local tme     ---@type any
+local wxr     ---@type any
+local net     ---@type any
+local orb     ---@type any
+local env     ---@type any
 
 local function ensure_loaded()
   if runtime ~= nil then
