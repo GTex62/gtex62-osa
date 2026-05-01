@@ -195,7 +195,7 @@ local function days_from_today(date_str)
   local y, m, d = date_str:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)$")
   if not y then return nil end
 
-  local now = os.date("*t")
+  local now = os.date("*t") --[[@as osdate]]
   local today = os.time { year = now.year, month = now.month, day = now.day, hour = 12 }
   local event_day = os.time { year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 12 }
   if not today or not event_day then return nil end
@@ -267,7 +267,7 @@ local function event_status_line()
     parse_event_lines(extra_events_path(), store)
   end
 
-  local today_key = os.date("%Y-%m-%d")
+  local today_key = tostring(os.date("%Y-%m-%d"))
   local next_event = nil
   for _, event in pairs(store) do
     if event.date >= today_key and (not next_event or event.date < next_event.date or (event.date == next_event.date and event.name < next_event.name)) then
@@ -283,7 +283,7 @@ local function event_status_line()
   end
 
   local y, m, d = next_event.date:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)$")
-  local month = y and string.upper(os.date("%b", os.time { year = tonumber(y), month = tonumber(m), day = tonumber(d) })) or next_event.date:sub(6, 7)
+  local month = y and string.upper(tostring(os.date("%b", os.time { year = y, month = m, day = d }))) or next_event.date:sub(6, 7)
   local delta = days_from_today(next_event.date)
   local suffix = ""
   if delta == 0 then
@@ -301,11 +301,13 @@ local function days_in_month(y, m)
     nm, ny = 1, y + 1
   end
   local t = os.time { year = ny, month = nm, day = 0 }
-  return os.date("*t", t).day
+  local dt = os.date("*t", t) --[[@as osdate]]
+  return dt.day
 end
 
 local function weekday_su0(y, m, d)
-  return os.date("*t", os.time { year = y, month = m, day = d }).wday - 1
+  local dt = os.date("*t", os.time { year = y, month = m, day = d }) --[[@as osdate]]
+  return dt.wday - 1
 end
 
 local function build_weeks(y, m)
@@ -455,17 +457,13 @@ end
 function M.status_lines()
   local evt_line = event_status_line()
   local local_time = parse_time_local(time_current_json_path())
-  if local_time then
-    return {
-      string.format("%s // %s", local_time.zone or "", local_time.time or ""),
-      string.format("CAL // %s", local_time.date or ""),
-      evt_line,
-    }
-  end
-
+  local zone = (local_time and local_time.zone ~= "" and local_time.zone)
+    or string.upper(tostring(os.date("%Z")))
+  local date_str = (local_time and local_time.date ~= "" and local_time.date)
+    or string.upper(tostring(os.date("%a, %b %d, %Y")))
   return {
-    string.format("%s // %s", string.upper(os.date("%Z")), os.date("%H:%M:%S")),
-    string.format("CAL // %s", string.upper(os.date("%a, %b %d, %Y"))),
+    string.format("%s // %s", zone, tostring(os.date("%H:%M:%S"))),
+    string.format("CAL // %s", date_str),
     evt_line,
   }
 end
@@ -492,7 +490,7 @@ function M.clock_rows()
     { zone = "JST", tz = "Asia/Tokyo", name = "JAPAN STANDARD TIME" },
   }
 
-  local rows = {}
+  rows = {}
   for _, spec in ipairs(DISPLAY_ZONES) do
     local parts = tz_date_parts(spec.tz) or {}
     rows[#rows + 1] = {
@@ -507,16 +505,16 @@ function M.clock_rows()
 end
 
 function M.calendar_title()
-  return string.upper(os.date("%B %Y"))
+  return string.upper(tostring(os.date("%B %Y")))
 end
 
 function M.calendar_weeks()
-  local now = os.date("*t")
+  local now = os.date("*t") --[[@as osdate]]
   return build_weeks(now.year, now.month)
 end
 
 function M.calendar_today()
-  local now = os.date("*t")
+  local now = os.date("*t") --[[@as osdate]]
   return now.day
 end
 
