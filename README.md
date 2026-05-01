@@ -43,12 +43,9 @@ the suite-level facts close at hand without copying the engine manual.
 
 ## Screenshots / Design References
 
-The repo currently carries design and measured layout references rather than a
-published screenshot set:
+![gtex62-osa — lcd_parchment palette with frame lights](screenshots/osa-main-lcd_parchment.png)
 
-- [Design Index](design/README.md)
-- [Previsualization 10](design/previz_gtex62-osa-10.png)
-- [Measured Previsualization 11](design/previz_gtex62-osa-11-measured.png)
+*`lcd_parchment` palette with frame lights enabled.*
 
 ## Features
 
