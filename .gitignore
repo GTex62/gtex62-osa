@@ -34,6 +34,9 @@ events_cache.txt
 seasonal.vars
 owm_forecast.json
 
+# Design assets
+/design/
+
 # Local tool/editor state
 .codex
 .DS_Store
