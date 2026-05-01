@@ -265,13 +265,12 @@ end
 
 local function format_hms(total_seconds)
   if not total_seconds then
-    return "00:00:00"
+    return "00:00"
   end
   total_seconds = math.floor(total_seconds)
   local hours = math.floor(total_seconds / 3600)
   local minutes = math.floor((total_seconds % 3600) / 60)
-  local seconds = total_seconds % 60
-  return string.format("%02d:%02d:%02d", hours, minutes, seconds)
+  return string.format("%02d:%02d", hours, minutes)
 end
 
 local function display_size(value)
