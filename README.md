@@ -75,6 +75,13 @@ Base runtime:
 - `lm-sensors` for CPU temperature where available
 - `feh` if you want the launcher to apply shared wallpapers
 
+Fonts:
+
+- `gtex62-wx-symbols.ttf` and `gtex62osa.ttf` from `gtex62-shared-assets`
+  are **required** for OSA to render correctly. Install them with the core font
+  helper (see [Installation](#installation)) or copy them manually into
+  `~/.local/share/fonts/` and run `fc-cache -f`.
+
 Optional data sources:
 
 - OpenWeather API key for weather and forecast.
@@ -113,6 +120,16 @@ git clone https://github.com/GTex62/gtex62-core.git
 git clone https://github.com/GTex62/gtex62-shared-assets.git
 git clone https://github.com/GTex62/gtex62-osa.git
 ```
+
+Install fonts from shared assets (optional, but the two OSA-required fonts must
+be present — see [Requirements](#requirements)):
+
+```bash
+bash ~/.config/conky/gtex62-core/scripts/install-fonts.sh
+```
+
+This copies all fonts from `gtex62-shared-assets/fonts/` into
+`~/.local/share/fonts/` and rebuilds the font cache. Run it once after cloning.
 
 The suite no longer carries its own `fonts/`, `assets/`, `examples/`, or
 legacy config archive. Those belong to the engine and shared-assets repos.
