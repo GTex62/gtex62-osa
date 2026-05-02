@@ -17,7 +17,7 @@ end
 local engine_runtime = load_engine_runtime()
 
 -- Monitor selection (0 = primary, 1 = secondary)
-theme.monitor_head = 1
+theme.monitor_head = 0
 
 -- Screenshot overrides. Leave blank for live data.
 theme.screenshot = {
