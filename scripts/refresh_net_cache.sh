@@ -81,7 +81,7 @@ vpn_state() {
     esac
   fi
 
-  if ip link show wg0 >/dev/null 2>&1 && ip addr show wg0 2>/dev/null | grep -q "inet "; then
+  if ip -o -4 addr show 2>/dev/null | awk '$2 ~ /^wg/ {found=1; exit} END {exit !found}'; then
     printf 'ON\n'
     return
   fi
@@ -166,6 +166,7 @@ else
 fi
 
 SPEEDTEST_DOWN="$(json_value "$CONNECTIVITY_JSON" '.speedtest.display_down_mbps // .speedtest.download_mbps // empty')"
+# shellcheck disable=SC2016  # jq variables ($s, $sec) are not bash variables
 SPEEDTEST_AGE="$(json_value "$CONNECTIVITY_JSON" '
   def zpad:
     tostring | if length == 1 then "0" + . else . end;
@@ -203,9 +204,13 @@ if [[ "$SPEEDTEST_DELTA" =~ ^[+-]?[0-9]+$ ]]; then
   printf -v SPEEDTEST_DELTA "%+04d" "$SPEEDTEST_DELTA"
 fi
 
+VPN_STATE="$(normalize "$(vpn_state)")"
 WAN_IP="$(normalize "$(json_value "$NETWORK_JSON" '.interface.wan_ip // empty')")"
 WAN_IP="${WAN_IP:-$(normalize "$("$HELPER" wan_ip "$IFACE" 2>/dev/null || true)")}"
-VPN_STATE="$(normalize "$(vpn_state)")"
+if [[ "$VPN_STATE" == "ON" ]]; then
+  VPN_WAN_IP="$(piactl get vpnip 2>/dev/null | tr -d '[:space:]' || true)"
+  [[ -n "$VPN_WAN_IP" ]] && WAN_IP="$VPN_WAN_IP"
+fi
 LAN_IP="$(normalize "$(json_value "$NETWORK_JSON" '.interface.lan_ip // empty')")"
 LAN_IP="${LAN_IP:-$(normalize "$(ip -o -4 addr show dev "$IFACE" 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1)")}"
 DNS="$(normalize "$(json_value "$NETWORK_JSON" '.interface.dns // empty')")"
