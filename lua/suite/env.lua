@@ -316,13 +316,15 @@ jq -r '[
   (.norm.UV // .normalized.UV // .values.UV // ""),
   (.norm.RAD // .normalized.RAD // .values.RAD // ""),
   (.values.UV // ""),
-  (.values.RAD // "")
+  (.values.RAD // ""),
+  (.meta.uv_source // "synthetic")
 ] | @tsv' %q 2>/dev/null]], path))
   local fields = parse_tsv(out)
   local uv = field_number(fields, 1)
   local rad = field_number(fields, 2)
   local uv_value = field_number(fields, 3)
   local rad_value = field_number(fields, 4)
+  local uv_source = fields[5] or "synthetic"
 
   if uv and uv <= 1 then uv = uv * 100 end
   if rad and rad <= 1 then rad = rad * 100 end
@@ -339,6 +341,7 @@ jq -r '[
     rad = rad,
     uv_value = uv_value or uv,
     rad_value = rad_value or rad,
+    uv_source = uv_source,
   }
 end
 
@@ -440,11 +443,14 @@ local function source_line()
     end
   end
 
+  local solar = CACHE.solar or {}
+  local sol_tag = (solar.uv_source == "open-meteo") and "MET" or "DRV"
+
   if #parts == 0 then
-    return "SRC // OWM BASE | ANW NONE"
+    return "SRC // OWM BASE | ANW NONE | " .. sol_tag
   end
 
-  return "SRC // OWM BASE | ANW " .. table.concat(parts, " ")
+  return "SRC // OWM BASE | ANW " .. table.concat(parts, " ") .. " | " .. sol_tag
 end
 
 function M.status_lines()

@@ -121,6 +121,15 @@ Derived:
 `meta.uv_source` is `"open-meteo"` when real data was fetched, `"synthetic"`
 when the fallback ran.
 
+## ENV panel status line
+
+The ENV panel SRC line includes a solar source token:
+
+- `| MET` — UV and RAD are live Open-Meteo data
+- `| DRV` — UV and RAD are from the synthetic fallback
+
+Example: `SRC // OWM BASE | ANW AQI PM2.5 | MET`
+
 ## Normalization ranges
 
 - UV  : 0–11 (WHO UV index scale)
