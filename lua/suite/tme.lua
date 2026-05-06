@@ -483,7 +483,7 @@ function M.clock_rows()
   end
 
   local DISPLAY_ZONES = {
-    { zone = "UTC", tz = "UTC", name = "UNIVERSAL TIME COORDINATED" },
+    { zone = "UTC", tz = "UTC", name = "UNIVERSAL TIME COORD" },
     { zone = "CT", tz = "America/Chicago", name = "CENTRAL TIME" },
     { zone = "PT", tz = "America/Los_Angeles", name = "PACIFIC TIME" },
     { zone = "CET", tz = "Europe/Berlin", name = "CENTRAL EUROPEAN TIME" },
