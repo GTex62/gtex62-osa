@@ -163,7 +163,6 @@ end
 
 local function pick_today_rise_set(source_a, source_b, key)
   local day_start, day_end = current_day_window()
-  local now_ts = os.time()
 
   local prev_rise = pick_numeric(source_a, source_b, key .. "_PREV_RISE_TS")
   local next_rise = pick_numeric(source_a, source_b, key .. "_NEXT_RISE_TS")
@@ -188,10 +187,11 @@ local function pick_today_rise_set(source_a, source_b, key)
     return rise_ts, set_ts
   end
 
-  -- Preserve the carryover segment after midnight when the body rose yesterday
-  -- and sets during the current day.
+  -- Preserve the carryover segment when the body rose before midnight and
+  -- sets during the current day. Show the pair regardless of whether the
+  -- set has already passed (e.g. moon rose at 23:51 and set at 09:18).
   if rise_ts == nil and prev_rise ~= nil and set_ts ~= nil then
-    if prev_rise < day_start and now_ts <= set_ts then
+    if prev_rise < day_start then
       return prev_rise, set_ts
     end
   end
