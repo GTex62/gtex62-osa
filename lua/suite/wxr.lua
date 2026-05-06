@@ -127,7 +127,14 @@ end
 local function aviation_station(kind)
   local _, cfg = profile_config("aviation", "home")
   local stations = cfg.stations or {}
-  return string.upper(stations[kind] or stations.primary or "KMEM")
+  if stations[kind] then return string.upper(stations[kind]) end
+  if kind == "station_model" then
+    local site = parse_simple_toml(string.format("%s/site.toml", RUNTIME_ROOT))
+    local av = (site.aviation or {})
+    local id = av.station_model or av.metar or av.primary
+    if id and id ~= "" then return string.upper(id) end
+  end
+  return string.upper(stations.primary or "KMEM")
 end
 
 local function weather_shared_dir()
@@ -884,7 +891,7 @@ end
 
 local function decode_station_model()
   local weather_codes = load_weather_codes()
-  local parsed = parse_station_model(extract_ob_line(read_aviation_text("metar") or ""))
+  local parsed = parse_station_model(extract_ob_line(read_aviation_text("station_model") or ""))
   local cloud_glyph = nil
   if weather_codes and weather_codes.CLOUD_GLYPHS then
     cloud_glyph = weather_codes.CLOUD_GLYPHS[parsed.cloud_code or "N_Slash"]
@@ -905,7 +912,7 @@ local function decode_station_model()
   end
   local slp_inhg = slp_hpa and hpa_to_inhg(slp_hpa) or parsed.altimeter_inhg
   return {
-    station = aviation_station("metar"),
+    station = aviation_station("station_model"),
     cloud_glyph = cloud_glyph or "---",
     wx_glyph = (parsed.present_wx and parsed.present_wx.glyph) or "",
     visibility = format_station_value(format_visibility_sm(parsed.vis_sm)),
@@ -1000,6 +1007,8 @@ read_aviation_text = function(kind)
   local filter
   if kind == "metar" then
     filter = ".metar_raw // .metar // .current.metar_raw // .current.metar // empty"
+  elseif kind == "station_model" then
+    filter = ".station_model_raw // .metar_raw // .metar // .current.metar_raw // .current.metar // empty"
   else
     filter = ".taf_raw // .taf // .current.taf_raw // .current.taf // empty"
   end
@@ -1211,7 +1220,7 @@ end
 function M.station_model()
   refresh()
   return CACHE.station_model or {
-    station = aviation_station("metar"),
+    station = aviation_station("station_model"),
     cloud_glyph = "---",
     wx_glyph = "",
     visibility = "/",
