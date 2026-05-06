@@ -1,3 +1,8 @@
+-- gtex62-osa Conky Theme
+
+----------------------------------------------------------------
+-- Shared Theme Core
+----------------------------------------------------------------
 local theme = {}
 local HOME = os.getenv("HOME") or ""
 local CORE_DIR = os.getenv("GTEX62_CORE_DIR")
@@ -24,6 +29,7 @@ theme.screenshot = {
   wan_ip = "",
 }
 
+-- Palette
 theme.default_palette = palette_catalog.default or "amber"
 theme.active_palette = os.getenv("CONKY_OSA_PALETTE") or theme.default_palette
 theme.palettes = palette_catalog.palettes or {}
@@ -52,6 +58,9 @@ theme.strokes = {
   frame_alpha = 0.99,
 }
 
+----------------------------------------------------------------
+-- Theme FX
+----------------------------------------------------------------
 theme.frame_shadow = {
   enabled = true,
   color = { 0.0, 0.0, 0.0 },
@@ -130,6 +139,9 @@ theme.frame_lights = {
   },
 }
 
+----------------------------------------------------------------
+-- Fonts
+----------------------------------------------------------------
 theme.fonts = {
   title = "Eurostile LT Std",
   data = "GTex62 OSA",
@@ -151,6 +163,9 @@ theme.spacing = {
   box_title_x = 20,
 }
 
+----------------------------------------------------------------
+-- System Section
+----------------------------------------------------------------
 theme.sys = {
   status = {
     x = 46,
@@ -343,170 +358,9 @@ theme.sys = {
   },
 }
 
-theme.tme = {
-  status = {
-    x = 46,
-    y = 36,
-    line_step = 22,
-  },
-  clock_table = {
-    x = 16,
-    y = 24,
-    header_gap = 2,
-    header_h = 16,
-    header_font_pt = 18,
-    row_y = 34,
-    row_step = 24,
-    rows = 5,
-    row_font_pt = 16,
-    zone_w = 56,
-    off_w = 40,
-    time_w = 56,
-    date_w = 72,
-    name_w = 224,
-    name_pad_x = 8,
-  },
-  calendar = {
-    x = 16,
-    y = 24,
-    month_x = 0,
-    header_y = 8,
-    month_h = 16,
-    month_font_pt = 18,
-    events_x = 264,
-    events_w = 192,
-    events_h = 16,
-    events_gap = 16,
-    events_header_font_pt = 18,
-    grid_x = 0,
-    cell_w = 36,
-    weekday_cell_h = 16,
-    day_cell_h = 28,
-    weekday_font_pt = 12,
-    day_font_pt = 14,
-    today_inset = 2,
-    overflow_alpha = 0.5,
-    overflow_color = { 1.0, 1.0, 0.0 },
-    events_body_y = 40,
-    events_row_step = 18,
-    events_font_pt = 14,
-    events_max_rows = 12,
-    event_marker_size = 4,
-    event_marker_inset = 2,
-  },
-}
-
-theme.wxr = {
-  status = {
-    x = 46,
-    y = 36,
-    line_step = 22,
-  },
-  current = {
-    x = 16,
-    y = 24,
-    width = 456,
-    header_gap = 2,
-    header_h = 16,
-    header_font_pt = 18,
-    rule_gap = 1,
-    value_font_pt = 18,
-    symbol_font_pt = 32,
-    sky_symbol_y_offset = -6,
-    metar_rule_y = 60,
-    metar_x = 0,
-    metar_y = 76,
-    metar_font_pt = 14,
-    metar_line_step = 14,
-    metar_max_lines = 7,
-    metar_wrap_col = 58,
-  },
-  forecast = {
-    x = 16,
-    y = 24,
-    width = 456,
-    header_gap = 2,
-    header_h = 16,
-    header_font_pt = 18,
-    row_h = 24,
-    rows = 5,
-    cell_font_pt = 16,
-    symbol_font_pt = 20,
-    sky_symbol_y_offset = -4,
-    taf_x = 0,
-    taf_y = 158,
-    taf_font_pt = 14,
-    taf_line_step = 14,
-    taf_max_lines = 8,
-    taf_wrap_col = 58,
-    taf_indent_cols = 2,
-  },
-  station_model = {
-    x = -80,
-    y = 24,
-    width = 456,
-    height = 184,
-    center_x = 228,
-    center_y = 88,
-    circle_radius = 80,
-    circle_stroke = 0,
-    outer_radius = 80,
-    outer_stroke = 0,
-    compass_radius = 88,
-    compass_major_len = 8,
-    compass_minor_len = 4,
-    compass_major_width = 2,
-    compass_minor_width = 1,
-    n_label_pt = 16,
-    cloud_font_pt = 30,
-    cloud_glyph_x = 0,
-    cloud_glyph_y = -6,
-    wx_font_pt = 28,
-    value_font_pt = 18,
-    tendency_font_pt = 18,
-    station_font_pt = 14,
-    vis_x = -56,
-    vis_y = 0,
-    wx_x = -36,
-    wx_y = 0,
-    temp_x = -44,
-    temp_y = -34,
-    dew_x = -44,
-    dew_y = 34,
-    slp_x = 30,
-    slp_y = -34,
-    tendency_x = 34,
-    tendency_y = 0,
-    tendency_glyph_dx = 30,
-    precip_x = 30,
-    precip_y = 34,
-    wind_staff_len = 30,
-    wind_staff_start = 18,
-    wind_line_width = 2,
-    wind_barb_len = 18,
-    wind_half_len = 12,
-    wind_spacing = 7,
-    wind_angle_deg = 60,
-    wind_pennant_len = 15,
-    wind_pennant_width = 8,
-    station_label_y = 70,
-    slp_meter_x = 378,
-    slp_meter_y = 8,
-    slp_meter_w = 128,
-    slp_meter_header_h = 16,
-    slp_meter_body_h = 128,
-    slp_meter_footer_h = 16,
-    slp_meter_footer_gap = 2,
-    slp_meter_font_pt = 18,
-    slp_meter_value_font_pt = 16,
-    slp_meter_footer_font_pt = 16,
-    slp_meter_bar_w = 8,
-    slp_meter_min_hpa = 950,
-    slp_meter_max_hpa = 1050,
-    slp_meter_value_spread = 6,
-  },
-}
-
+----------------------------------------------------------------
+-- Network Section
+----------------------------------------------------------------
 theme.net = {
   status = {
     x = 46,
@@ -621,6 +475,65 @@ theme.net = {
   },
 }
 
+----------------------------------------------------------------
+-- Time Section
+----------------------------------------------------------------
+theme.tme = {
+  status = {
+    x = 46,
+    y = 36,
+    line_step = 22,
+  },
+  clock_table = {
+    x = 16,
+    y = 24,
+    header_gap = 2,
+    header_h = 16,
+    header_font_pt = 18,
+    row_y = 34,
+    row_step = 24,
+    rows = 5,
+    row_font_pt = 16,
+    zone_w = 56,
+    off_w = 40,
+    time_w = 56,
+    date_w = 72,
+    name_w = 224,
+    name_pad_x = 8,
+  },
+  calendar = {
+    x = 16,
+    y = 24,
+    month_x = 0,
+    header_y = 8,
+    month_h = 16,
+    month_font_pt = 18,
+    events_x = 264,
+    events_w = 192,
+    events_h = 16,
+    events_gap = 16,
+    events_header_font_pt = 18,
+    grid_x = 0,
+    cell_w = 36,
+    weekday_cell_h = 16,
+    day_cell_h = 28,
+    weekday_font_pt = 12,
+    day_font_pt = 14,
+    today_inset = 2,
+    overflow_alpha = 0.5,
+    overflow_color = { 1.0, 1.0, 0.0 },
+    events_body_y = 40,
+    events_row_step = 18,
+    events_font_pt = 14,
+    events_max_rows = 12,
+    event_marker_size = 4,
+    event_marker_inset = 2,
+  },
+}
+
+----------------------------------------------------------------
+-- Orbital Section
+----------------------------------------------------------------
 theme.orb = {
   status = {
     x = 46,
@@ -674,6 +587,130 @@ theme.orb = {
   },
 }
 
+----------------------------------------------------------------
+-- Weather Section
+----------------------------------------------------------------
+theme.wxr = {
+  status = {
+    x = 46,
+    y = 36,
+    line_step = 22,
+  },
+  current = {
+    x = 16,
+    y = 24,
+    width = 456,
+    header_gap = 2,
+    header_h = 16,
+    header_font_pt = 18,
+    rule_gap = 1,
+    value_font_pt = 18,
+    symbol_font_pt = 32,
+    sky_symbol_y_offset = -6,
+    metar_rule_y = 60,
+    metar_x = 0,
+    metar_y = 76,
+    metar_font_pt = 14,
+    metar_line_step = 14,
+    metar_max_lines = 7,
+    metar_wrap_col = 58,
+  },
+  forecast = {
+    x = 16,
+    y = 24,
+    width = 456,
+    header_gap = 2,
+    header_h = 16,
+    header_font_pt = 18,
+    row_h = 24,
+    rows = 5,
+    cell_font_pt = 16,
+    symbol_font_pt = 20,
+    sky_symbol_y_offset = -4,
+    taf_x = 0,
+    taf_y = 158,
+    taf_font_pt = 14,
+    taf_line_step = 14,
+    taf_max_lines = 8,
+    taf_wrap_col = 58,
+    taf_indent_cols = 2,
+  },
+  station_model = {
+    x = -80,
+    y = 24,
+    width = 456,
+    height = 184,
+    center_x = 228,
+    center_y = 88,
+    circle_radius = 80,
+    circle_stroke = 0,
+    outer_radius = 80,
+    outer_stroke = 0,
+
+    compass_radius = 88,
+    compass_major_len = 8,
+    compass_minor_len = 4,
+    compass_major_width = 2,
+    compass_minor_width = 1,
+
+    n_label_pt = 16,
+
+    cloud_font_pt = 30,
+    cloud_glyph_x = 0,
+    cloud_glyph_y = -6,
+    wx_font_pt = 28,
+    value_font_pt = 18,
+    tendency_font_pt = 18,
+    station_font_pt = 14,
+
+    vis_x = -56,
+    vis_y = 0,
+    wx_x = -36,
+    wx_y = 0,
+    temp_x = -44,
+    temp_y = -34,
+    dew_x = -44,
+    dew_y = 34,
+    slp_x = 30,
+    slp_y = -34,
+    tendency_x = 34,
+    tendency_y = 0,
+    tendency_glyph_dx = 30,
+    precip_x = 30,
+    precip_y = 34,
+
+    wind_staff_len = 30,
+    wind_staff_start = 18,
+    wind_line_width = 2,
+    wind_barb_len = 18,
+    wind_half_len = 12,
+    wind_spacing = 7,
+    wind_angle_deg = 60,
+    wind_pennant_len = 15,
+    wind_pennant_width = 8,
+
+    station_label_y = 70,
+
+    slp_meter_x = 378,
+    slp_meter_y = 8,
+    slp_meter_w = 128,
+    slp_meter_header_h = 16,
+    slp_meter_body_h = 128,
+    slp_meter_footer_h = 16,
+    slp_meter_footer_gap = 2,
+    slp_meter_font_pt = 18,
+    slp_meter_value_font_pt = 16,
+    slp_meter_footer_font_pt = 16,
+    slp_meter_bar_w = 8,
+    slp_meter_min_hpa = 950,
+    slp_meter_max_hpa = 1050,
+    slp_meter_value_spread = 6,
+  },
+}
+
+----------------------------------------------------------------
+-- Environmental Section
+----------------------------------------------------------------
 theme.env = {
   status = {
     x = 46,
@@ -696,12 +733,15 @@ theme.env = {
     meter_gap = 16,
     footer_h = 16,
     footer_gap = 2,
+
     aqi_value_y = 34,
     aqi_value_font_pt = 14,
     aqi_value_spread = 22,
+
     owm_aqi_bar_max = 5,
     meter_value_font_pt = 20,
     solar_value_spread = 40,
+
     meter_bar_w = 8,
     meter_bar_gap = 16,
     meter_marks = {
