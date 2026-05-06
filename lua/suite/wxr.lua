@@ -461,6 +461,10 @@ local function extract_ob_line(raw)
     if ob and ob ~= "" then
       return normalize_spaces(ob)
     end
+    local icao = line:match("^METAR%s+(.+)$") or line:match("^SPECI%s+(.+)$")
+    if icao and icao ~= "" then
+      return normalize_spaces(icao)
+    end
   end
   return normalize_spaces(raw)
 end
@@ -1030,8 +1034,7 @@ local function decode_metar_lines()
     return { "METAR UNAVAILABLE" }
   end
 
-  local ob = raw:match("\nob:%s*(.-)\n") or raw:match("^ob:%s*(.-)\n") or raw
-  ob = normalize_spaces(ob)
+  local ob = extract_ob_line(raw)
   if ob == "" then
     ob = string.format("%s METAR UNAVAILABLE", aviation_station("metar"))
   end
