@@ -174,33 +174,43 @@ choose_wallpaper() {
 
   if [[ -f "$cache_last" ]]; then
     last="$(cat "$cache_last" 2>/dev/null || true)"
-    for i in "${!WALLS[@]}"; do
-      if [[ "${WALLS[$i]}" == "$last" ]]; then
-        default_choice="$((i + 1))"
-        break
-      fi
-    done
+    if [[ "$last" == "none" ]]; then
+      default_choice="0"
+    else
+      for i in "${!WALLS[@]}"; do
+        if [[ "${WALLS[$i]}" == "$last" ]]; then
+          default_choice="$((i + 1))"
+          break
+        fi
+      done
+    fi
   fi
 
-  if [[ "${#WALLS[@]}" -eq 1 ]]; then
+  if [[ "${#WALLS[@]}" -eq 1 && -z "$default_choice" ]]; then
     choice="1"
   else
     echo "Available wallpapers for gtex62-osa:"
+    printf "0) None\n"
     for i in "${!WALLS[@]}"; do
       printf "%d) %s\n" "$((i + 1))" "${WALLS[$i]}"
     done
 
     if [[ -n "$default_choice" ]]; then
-      read -rp "Select wallpaper [1-${#WALLS[@]}] (Enter=$default_choice): " choice
+      read -rp "Select wallpaper [0-${#WALLS[@]}] (Enter=$default_choice): " choice
       choice="${choice:-$default_choice}"
     else
-      read -rp "Select wallpaper [1-${#WALLS[@]}]: " choice
+      read -rp "Select wallpaper [0-${#WALLS[@]}]: " choice
     fi
   fi
 
-  if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#WALLS[@]} )); then
+  if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 0 || choice > ${#WALLS[@]} )); then
     echo "Invalid selection."
     exit 1
+  fi
+
+  if (( choice == 0 )); then
+    echo "none" > "$cache_last"
+    return 0
   fi
 
   local wallpaper_file="${WALLS[$((choice - 1))]}"
