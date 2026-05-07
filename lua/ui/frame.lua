@@ -1288,6 +1288,9 @@ local function draw_orb_night_box(cr, x, y, w, h, theme, cfg)
   local sunset_x = x + (((sunset_lon + 180) / 360) * w)
   local raw_box_x = sunset_x
 
+  local inner_fill = night_cfg.inner_fill == true
+  local gap = tonumber(night_cfg.inner_fill_gap) or 4
+
   local function stroke_box(rect_x, rect_w)
     if rect_w == nil then
       rect_w = box_w
@@ -1306,11 +1309,21 @@ local function draw_orb_night_box(cr, x, y, w, h, theme, cfg)
     )
   end
 
+  local function fill_inner(rect_x, rect_w)
+    if not inner_fill then return end
+    if rect_w == nil then rect_w = box_w end
+    local fw = rect_w - (gap * 2)
+    local fh = h - (gap * 2)
+    if fw <= 0 or fh <= 0 then return end
+    fill_rect(cr, rect_x + gap, y + gap, fw, fh, theme.colors.fg)
+  end
+
   if cfg.repeat_wrap == false then
     local box_x = raw_box_x
     box_x = math.max(x, math.min(raw_box_x, x + w - box_w))
     stroke_box(box_x, box_w)
-    return
+    fill_inner(box_x, box_w)
+    return box_x, box_w
   end
 
   local function visible_width(rect_x)
@@ -1330,6 +1343,8 @@ local function draw_orb_night_box(cr, x, y, w, h, theme, cfg)
   end
 
   stroke_box(box_x, box_w)
+  fill_inner(box_x, box_w)
+  return box_x, box_w
 end
 
 local function draw_flat_coastlines(cr, x, y, w, h, theme, cfg)
@@ -1354,13 +1369,54 @@ local function draw_flat_coastlines(cr, x, y, w, h, theme, cfg)
     h = target_h
   end
 
+  local offsets = { 0 }
+  if cfg.repeat_wrap ~= false then
+    offsets = { -w, 0, w }
+  end
+
+  local function draw_rings()
+    for _, ring in ipairs(rings) do
+      for _, offset_x in ipairs(offsets) do
+        local started = false
+        local prev_lon = nil
+
+        for _, pt in ipairs(ring) do
+          local lon = tonumber(pt[1]) or 0
+          local lat = tonumber(pt[2]) or 0
+          local px, py = project_lon_lat_flat(lon, lat, x + offset_x, y, w, h)
+
+          if prev_lon ~= nil and math.abs(lon - prev_lon) > 180 then
+            if started then
+              cairo_stroke(cr)
+              started = false
+            end
+          end
+
+          if not started then
+            cairo_new_path(cr)
+            cairo_move_to(cr, px, py)
+            started = true
+          else
+            cairo_line_to(cr, px, py)
+          end
+
+          prev_lon = lon
+        end
+
+        if started then
+          cairo_stroke(cr)
+        end
+      end
+    end
+  end
+
   cairo_save(cr)
   cairo_rectangle(cr, clip_x, clip_y, clip_w, clip_h)
   cairo_clip(cr)
   cairo_set_line_width(cr, tonumber(cfg.stroke_width) or theme.strokes.line)
   set_rgb(cr, theme.colors.fg)
 
-  draw_orb_night_box(cr, x, y, w, h, theme, cfg)
+  local nbx, nbw = draw_orb_night_box(cr, x, y, w, h, theme, cfg)
 
   if cfg.center_meridian ~= false then
     draw_rect(cr, x + (w / 2), y, 1, h, theme.strokes.line, theme.colors.fg)
@@ -1370,42 +1426,21 @@ local function draw_flat_coastlines(cr, x, y, w, h, theme, cfg)
     draw_rect(cr, x, y + (h / 2), w, 1, theme.strokes.line, theme.colors.fg)
   end
 
-  local offsets = { 0 }
-  if cfg.repeat_wrap ~= false then
-    offsets = { -w, 0, w }
-  end
+  draw_rings()
 
-  for _, ring in ipairs(rings) do
-    for _, offset_x in ipairs(offsets) do
-      local started = false
-      local prev_lon = nil
-
-      for _, pt in ipairs(ring) do
-        local lon = tonumber(pt[1]) or 0
-        local lat = tonumber(pt[2]) or 0
-        local px, py = project_lon_lat_flat(lon, lat, x + offset_x, y, w, h)
-
-        if prev_lon ~= nil and math.abs(lon - prev_lon) > 180 then
-          if started then
-            cairo_stroke(cr)
-            started = false
-          end
-        end
-
-        if not started then
-          cairo_new_path(cr)
-          cairo_move_to(cr, px, py)
-          started = true
-        else
-          cairo_line_to(cr, px, py)
-        end
-
-        prev_lon = lon
-      end
-
-      if started then
-        cairo_stroke(cr)
-      end
+  local night_cfg = cfg.night_box or {}
+  if night_cfg.inner_fill == true and nbx ~= nil then
+    local gap = tonumber(night_cfg.inner_fill_gap) or 4
+    local fw = nbw - (gap * 2)
+    local fh = h - (gap * 2)
+    if fw > 0 and fh > 0 then
+      cairo_save(cr)
+      cairo_new_path(cr)
+      cairo_rectangle(cr, nbx + gap, y + gap, fw, fh)
+      cairo_clip(cr)
+      set_rgb(cr, theme.colors.bg)
+      draw_rings()
+      cairo_restore(cr)
     end
   end
 

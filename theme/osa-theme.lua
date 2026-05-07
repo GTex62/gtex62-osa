@@ -583,6 +583,8 @@ theme.orb = {
     night_box = {
       enabled = true,
       stroke_width = 1,
+      inner_fill = true,
+      inner_fill_gap = 4,
     },
   },
 }
