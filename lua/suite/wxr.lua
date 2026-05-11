@@ -4,6 +4,7 @@ local HOME = os.getenv("HOME") or ""
 local SUITE_DIR = os.getenv("CONKY_SUITE_DIR") or (HOME .. "/.config/conky/gtex62-osa")
 local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
 local DEFAULT_ENGINE_CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
+local SUITE_ID = os.getenv("GTEX62_SUITE_ID") or os.getenv("GTEX62_CONKY_SUITE_ID") or "osa"
 
 local WEATHER_CODES = nil
 local load_weather_codes
@@ -31,6 +32,12 @@ local function command_output(cmd)
   out = out:gsub("%s+$", "")
   if out == "" then return nil end
   return out
+end
+
+local function session_start_ts()
+  local pid_file = string.format("%s/runtime/pids/%s-conky.pid",
+    DEFAULT_ENGINE_CACHE_ROOT, SUITE_ID)
+  return tonumber(command_output(string.format("stat -c %%Y %q 2>/dev/null", pid_file)))
 end
 
 local function minute_stamp()
@@ -294,6 +301,10 @@ local function weather_data_state()
     return "PARTIAL"
   end
   if newest_age and newest_age > 7200 then
+    return "STALE"
+  end
+  local session_ts = session_start_ts()
+  if session_ts and weather_provider_ts and weather_provider_ts < session_ts then
     return "STALE"
   end
   return "NOMINAL"
