@@ -1,10 +1,10 @@
 local M = {}
 
 local HOME = os.getenv("HOME") or ""
-local SUITE_DIR = os.getenv("CONKY_SUITE_DIR") or (HOME .. "/.config/conky/gtex62-osa")
 local ENGINE_CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
+local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
 local SUITE_ID = os.getenv("GTEX62_SUITE_ID") or os.getenv("GTEX62_CONKY_SUITE_ID") or "osa"
-local SUITE_CACHE_DIR = string.format("%s/suites/%s/orb", ENGINE_CACHE_ROOT, SUITE_ID)
+local ORB_CACHE_DIR
 
 local BODY_ROWS = {
   { body = "SUN", key = "SUN" },
@@ -20,6 +20,51 @@ local DATA_CACHE = {
   eph = { stamp = nil, data = {} },
 }
 local ORB_CACHE_TTL = tonumber(os.getenv("GTEX62_OSA_ORB_CACHE_TTL")) or 60
+
+local function read_file(path)
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local s = f:read("*a")
+  f:close()
+  return s
+end
+
+local function parse_simple_toml(path)
+  local out = {}
+  local section = nil
+  local s = read_file(path)
+  if not s then return out end
+  for line in s:gmatch("[^\r\n]+") do
+    line = line:gsub("#.*$", ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if line ~= "" then
+      local sec = line:match("^%[([%w_%-]+)%]$")
+      if sec then
+        section = sec
+        out[section] = out[section] or {}
+      else
+        local key, value = line:match("^([%w_%-]+)%s*=%s*(.+)$")
+        if key and value then
+          value = value:gsub('^"', ""):gsub('"$', "")
+          if section then
+            out[section][key] = value
+          else
+            out[key] = value
+          end
+        end
+      end
+    end
+  end
+  return out
+end
+
+local function orb_cache_dir()
+  if not ORB_CACHE_DIR then
+    local cfg = parse_simple_toml(RUNTIME_ROOT .. "/suites/" .. SUITE_ID .. ".toml")
+    local profile = ((cfg.profiles or {}).orb) or "home"
+    ORB_CACHE_DIR = string.format("%s/shared/orb/%s", ENGINE_CACHE_ROOT, profile)
+  end
+  return ORB_CACHE_DIR
+end
 
 local function command_output(cmd)
   local p = io.popen(cmd, "r")
@@ -60,7 +105,7 @@ local function ephemeris_data()
     return DATA_CACHE.eph.data
   end
 
-  DATA_CACHE.eph.data = read_keyvals(SUITE_CACHE_DIR .. "/ephemeris.vars")
+  DATA_CACHE.eph.data = read_keyvals(orb_cache_dir() .. "/ephemeris.vars")
 
   DATA_CACHE.eph.stamp = stamp
   return DATA_CACHE.eph.data
