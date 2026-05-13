@@ -584,7 +584,7 @@ theme.orb = {
       enabled = true,
       stroke_width = 1,
       inner_fill = false,
-      inner_fill_gap = 4,
+      inner_fill_gap = 2,
     },
   },
 }
@@ -726,13 +726,13 @@ theme.env = {
     header_h = 16,
     header_gap = 2,
     header_font_pt = 16,
-    row_font_pt = 14,
+    row_font_pt = 15,
     row_h = 16,
     table_gap = 0,
     table_value_w = 36,
     meter_w = 68,
     solar_meter_w = 136,
-    meter_gap = 16,
+    meter_gap = 8,
     footer_h = 16,
     footer_gap = 2,
 
@@ -753,6 +753,8 @@ theme.env = {
     },
     pollution_rows = 7,
     pollen_rows = 4,
+    pollen_label_w = 56,
+    pollen_bar_h = 6,
   },
 }
 

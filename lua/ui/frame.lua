@@ -868,17 +868,24 @@ local function draw_env_meter(cr, theme, x, y, w, cfg, label, value, bar_specs, 
   draw_table_header(cr, x + footer_w + footer_gap, footer_y, footer_w, footer_h, footer_right, font_pt, theme)
 end
 
-local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_limit)
+local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_limit, bar_max)
   local header_h = tonumber(cfg.header_h) or 16
   local header_gap = tonumber(cfg.header_gap) or 2
   local value_w = tonumber(cfg.table_value_w) or 36
-  local label_w = w - value_w - header_gap
+  local bar_h = bar_max and (tonumber(cfg.pollen_bar_h) or 6) or 0
+  local fixed_label_w = bar_max and tonumber(cfg.pollen_label_w)
+  local label_w = fixed_label_w or (w - value_w - header_gap)
+  local bar_w = bar_max and (w - label_w - (header_gap * 2) - value_w) or 0
+  local bar_col_w = bar_w > 0 and (bar_w + header_gap) or 0
   local header_font_pt = tonumber(cfg.header_font_pt) or theme.text.body_xs_pt
   local row_font_pt = tonumber(cfg.row_font_pt) or theme.text.micro_pt
   local row_h = tonumber(cfg.row_h) or 16
   local row_y = y + header_h + 12
+  local bar_x = x + label_w + header_gap
+  local value_cx = bar_x + bar_col_w + (value_w / 2)
 
-  draw_split_table_header(cr, x, y, label_w, header_gap, value_w, header_h, title, "(V)", header_font_pt, theme)
+  local title_span = bar_w > 0 and (label_w + header_gap + bar_w) or label_w
+  draw_split_table_header(cr, x, y, title_span, header_gap, value_w, header_h, title, "(V)", header_font_pt, theme)
   draw_rect(cr, x, y + header_h + 1, w, 1, theme.strokes.line, theme.colors.fg)
 
   rows = rows or {}
@@ -895,9 +902,13 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
       theme.colors.fg,
       CAIRO_FONT_WEIGHT_NORMAL
     )
+    if bar_w > 0 then
+      local ratio = (tonumber(row.value) or 0) / bar_max
+      draw_hbar(cr, bar_x, mid_y - (bar_h / 2), bar_w, bar_h, ratio, theme.colors.fg)
+    end
     draw_text_center_mid(
       cr,
-      x + label_w + header_gap + (value_w / 2),
+      value_cx,
       mid_y,
       string.upper(tostring(row.value or "")),
       theme.fonts.data,
@@ -2985,7 +2996,8 @@ local function draw_env_content(cr, theme, layout, panels, data)
     table_cfg,
     "POLLEN",
     type(env_data.pollen_rows) == "function" and env_data.pollen_rows() or {},
-    pollen_rows
+    pollen_rows,
+    100
   )
 
   draw_env_meter(
