@@ -305,7 +305,7 @@ local function weather_data_state()
   end
   local session_ts = session_start_ts()
   if session_ts and weather_provider_ts and weather_provider_ts < session_ts then
-    local weather_ttl = 300
+    local weather_ttl = 450
     if (os.time() - weather_provider_ts) > weather_ttl then
       return "STALE"
     end
