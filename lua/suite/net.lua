@@ -2,7 +2,7 @@ local M = {}
 local HOME = os.getenv("HOME") or ""
 local SUITE_ID = os.getenv("GTEX62_SUITE_ID") or os.getenv("GTEX62_CONKY_SUITE_ID") or "osa"
 local CACHE_ROOT = os.getenv("GTEX62_CACHE_DIR") or os.getenv("GTEX62_CONKY_CACHE_DIR") or (HOME .. "/.cache/gtex62-core")
-local NET_CACHE_DIR = string.format("%s/suites/%s/net", CACHE_ROOT, SUITE_ID)
+local NET_CACHE_DIR
 local RUNTIME_ROOT = os.getenv("GTEX62_CONFIG_DIR") or os.getenv("GTEX62_CONKY_CONFIG_DIR") or (HOME .. "/.config/gtex62-core")
 local CORE_DIR = os.getenv("GTEX62_CORE_DIR") or os.getenv("GTEX62_CONKY_ENGINE_DIR") or (HOME .. "/.config/conky/gtex62-core")
 local SUITE_DIR = os.getenv("CONKY_SUITE_DIR") or (HOME .. "/.config/conky/gtex62-osa")
@@ -119,6 +119,15 @@ local function connectivity_profile_id()
   return ((cfg.profiles or {}).connectivity) or "default"
 end
 
+local function net_cache_dir()
+  if not NET_CACHE_DIR then
+    local cfg = parse_simple_toml(RUNTIME_ROOT .. "/suites/" .. SUITE_ID .. ".toml")
+    local profile = ((cfg.profiles or {}).net) or "local"
+    NET_CACHE_DIR = string.format("%s/shared/net/%s", CACHE_ROOT, profile)
+  end
+  return NET_CACHE_DIR
+end
+
 local function json_query(path, filter)
   if not read_file(path) then return nil end
   return command_output(string.format("jq -r %q %q 2>/dev/null", filter, path))
@@ -134,8 +143,8 @@ local function refresh_cache()
     return
   end
 
-  CACHE.state = read_keyvals(NET_CACHE_DIR .. "/state.vars")
-  CACHE.vlan_rows = read_tsv_rows(NET_CACHE_DIR .. "/vlan.tsv")
+  CACHE.state = read_keyvals(net_cache_dir() .. "/state.vars")
+  CACHE.vlan_rows = read_tsv_rows(net_cache_dir() .. "/vlan.tsv")
   CACHE.tick = tick
 end
 
