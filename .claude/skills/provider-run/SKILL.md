@@ -1,13 +1,12 @@
 ---
 name: provider-run
 description: Run a gtex62-core provider manually to force-refresh the cache. Usage: /provider-run <domain>  Domains: net, time, orb, weather
-arguments: [domain]
 allowed-tools: Bash
 ---
 
 ## Task
 
-Run the `$domain` provider manually to force-refresh the cache, then verify the cache updated.
+Run the `$ARGUMENTS` provider manually to force-refresh the cache, then verify the cache updated.
 
 Provider commands by domain:
 
@@ -20,10 +19,10 @@ Provider commands by domain:
 
 ## Instructions
 
-1. Run the provider command for `$domain`.
+1. Run the provider command for `$ARGUMENTS`.
 2. Check that the cache file timestamp updated (`stat` the relevant file).
 3. Show a brief sample of the new cache content.
 4. Report success or any errors from the provider output.
 
-If `$domain` is not in the table above, check what providers exist under
+If `$ARGUMENTS` is not in the table above, check what providers exist under
 `~/.config/conky/gtex62-core/providers/` and suggest the correct one.
