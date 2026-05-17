@@ -1,4 +1,5 @@
 ---
+name: provider-run
 description: Run a gtex62-core provider manually to force-refresh the cache. Usage: /provider-run <domain>  Domains: net, time, orb, weather
 arguments: [domain]
 allowed-tools: Bash

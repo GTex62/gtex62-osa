@@ -1,4 +1,5 @@
 ---
+name: cache-check
 description: Check the age and content of a gtex62-core shared cache. Usage: /cache-check <domain>  Domains: net, time, orb, weather
 arguments: [domain]
 allowed-tools: Bash

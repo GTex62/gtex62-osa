@@ -1,4 +1,5 @@
 ---
+name: push-both
 description: Commit and push changes in both gtex62-osa and gtex62-core
 allowed-tools: Bash
 ---
