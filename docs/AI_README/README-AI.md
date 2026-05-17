@@ -49,6 +49,15 @@ A library of reusable prompt templates. Copy the one that matches the
 task type (coding session, bug report, two-repo change, code review,
 etc.) and fill in the blanks. Do not read the whole file.
 
+### Before starting — personal reference
+
+```text
+docs/AI_README/VS_Code-session-opener.md
+```
+
+Quick-reference for opening the workspace, the session-start prompt,
+and common reminders (two-repo commits, monitor_head, bootstrap).
+
 ---
 
 ## Suggested Session-Start Instruction
