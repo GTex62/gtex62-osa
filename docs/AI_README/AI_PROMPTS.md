@@ -9,7 +9,7 @@ Reusable prompts for ChatGPT, Claude, Codex, local models, Ollama, Continue.dev,
 ```text
 Context reset.
 
-Read docs/AI_CONTEXT.md first and treat it as authoritative.
+Read docs/AI_README/AI_CONTEXT.md first and treat it as authoritative.
 
 Do not read the whole repo by default.
 Do not edit anything yet.
@@ -27,7 +27,7 @@ First, list the smallest set of files you need to inspect and explain why.
 ```text
 Context reset.
 
-Read docs/AI_CONTEXT.md and docs/DEBUGGING_RULES.md first.
+Read docs/AI_README/AI_CONTEXT.md and docs/AI_README/DEBUGGING_RULES.md first.
 
 Issue:
 [describe exact symptom]
@@ -62,9 +62,9 @@ List the files you believe are relevant and why.
 Context reset.
 
 Read:
-1. docs/AI_CONTEXT.md
-2. docs/DEBUGGING_RULES.md
-3. docs/TROUBLESHOOTING_MAP.md
+1. docs/AI_README/AI_CONTEXT.md
+2. docs/AI_README/DEBUGGING_RULES.md
+3. docs/AI_README/TROUBLESHOOTING_MAP.md
 
 Issue:
 In the NET panel, the ping and VLAN meters are stuck.
@@ -184,7 +184,7 @@ Give me the smallest safe next step.
 ```text
 Update documentation for this change.
 
-Read docs/AI_CONTEXT.md first.
+Read docs/AI_README/AI_CONTEXT.md first.
 
 Change made:
 [describe change]

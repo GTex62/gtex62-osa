@@ -173,22 +173,26 @@ Every fix should include one of:
 - A visual confirmation step
 - A before/after expected output
 
-Example:
+Example — check NET cache freshness:
 
 ```bash
-stat ~/.cache/gtex62-osa/net_ping.json
+stat ~/.cache/gtex62-core/shared/net/local/state.vars
 ```
 
-Example:
+Example — run NET provider manually:
 
 ```bash
-bash -x ~/.config/conky/gtex62-osa/scripts/update-net.sh
+bash ~/.config/conky/gtex62-core/providers/net/fetch_net.sh local
 ```
 
-Example:
+Example — run weather provider manually:
 
 ```bash
-conky -c ~/.config/conky/gtex62-osa/conky.conf
+bash ~/.config/conky/gtex62-core/providers/weather/fetch_weather.sh home
 ```
 
-Adjust paths to match the actual suite.
+Example — reload suite:
+
+```bash
+bash ~/.config/conky/gtex62-osa/scripts/start-conky.sh
+```
