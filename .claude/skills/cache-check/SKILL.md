@@ -5,25 +5,27 @@ arguments: [domain]
 allowed-tools: Bash
 ---
 
-## Cache files for domain: $domain
+## Task
 
-!`CACHE="$HOME/.cache/gtex62-core/shared/$domain"; if [ -d "$CACHE" ]; then for f in "$CACHE"/*; do [ -f "$f" ] && printf "%s  age=%ss\n" "$(basename "$f")" "$(( $(date +%s) - $(stat -c '%Y' "$f") ))"; done; else echo "Cache directory not found: $CACHE"; fi`
+Check the shared cache for domain `$domain`.
 
-## Cache content
-
-!`CACHE="$HOME/.cache/gtex62-core/shared/$domain"; cat "$CACHE/state.vars" 2>/dev/null || (cat "$CACHE/current.json" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -50) || cat "$CACHE/ephemeris.vars" 2>/dev/null || cat "$CACHE/vlan.tsv" 2>/dev/null || echo "No recognisable cache file found."`
+Cache directory: `~/.cache/gtex62-core/shared/$domain/`
 
 ## Instructions
 
-Report concisely:
-1. Is the cache present and fresh (age within expected TTL)?
-2. Key values from the content
-3. Any obvious problems (missing file, stale timestamp, empty content)
+1. List the files in `~/.cache/gtex62-core/shared/$domain/` and show each file's age in seconds.
+2. Show the content of the primary cache file:
+   - `state.vars` for net
+   - `current.json` for time or weather (first 40 lines)
+   - `ephemeris.vars` for orb
+   - `vlan.tsv` for net VLAN rows
+3. Report concisely:
+   - Is the cache present and fresh (age within expected TTL)?
+   - Key values from the content
+   - Any obvious problems (missing file, stale timestamp, empty content)
 
-Expected TTLs by domain:
-- net: 1s (VLAN/ping fast-track)
+Expected TTLs:
+- net: 1s (VLAN/ping are fast-track meters)
 - time: 1s
 - orb: 60s
 - weather: 300s
-
-If the domain is not one of the above, check what files exist and report them.
