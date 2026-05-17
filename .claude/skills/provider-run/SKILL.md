@@ -1,6 +1,6 @@
 ---
 name: provider-run
-description: Run a gtex62-core provider manually to force-refresh the cache. Usage: /provider-run <domain>  Domains: net, time, orb, weather
+description: Run a gtex62-core provider manually to force-refresh the cache. Usage: /provider-run <domain>  Domains: net, time, orb, weather, air, solar, env (env runs both air and solar)
 allowed-tools: Bash
 ---
 
@@ -16,6 +16,9 @@ Provider commands by domain:
 | time    | `bash ~/.config/conky/gtex62-core/providers/time/fetch_time.sh local` |
 | orb     | `bash ~/.config/conky/gtex62-core/providers/orb/fetch_orb.sh home` |
 | weather | `bash ~/.config/conky/gtex62-core/providers/weather/fetch_weather.sh home` |
+| air     | `bash ~/.config/conky/gtex62-core/providers/air/fetch_air.sh home` |
+| solar   | `bash ~/.config/conky/gtex62-core/providers/solar/fetch_solar.sh home` |
+| env     | run both `air` and `solar` commands above |
 
 ## Instructions
 
