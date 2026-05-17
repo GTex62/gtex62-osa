@@ -26,6 +26,26 @@ Its purpose is to provide the smallest useful context packet: project identity, 
 - Suite-specific behavior belongs in `~/.config/conky/gtex62-osa/`.
 - Engine/provider behavior belongs in `~/.config/conky/gtex62-core/`.
 
+### Bootstrap Profile Gap
+
+When a new provider is added to `gtex62-core`, its runtime profile TOML must be installed before the suite can use it. The bootstrap script installs all `.example` files from `gtex62-core/examples/runtime/`:
+
+```bash
+bash ~/.config/conky/gtex62-core/bin/gtex62-core-bootstrap-runtime
+```
+
+If a profile TOML is missing, the launcher falls back to a 60-second TTL, making fast-track meters (VLAN, ping) appear frozen. **Always check whether the profile TOML exists before debugging a frozen meter.**
+
+```bash
+ls ~/.config/gtex62-core/profiles/net/
+ls ~/.config/gtex62-core/profiles/orb/
+ls ~/.config/gtex62-core/profiles/time/
+```
+
+### `monitor_head` Is Always Locally Modified
+
+`theme/osa-theme.lua` will almost always show `M` in `git status` because `monitor_head` is changed locally after every push. This is expected — do not flag it as a problem, do not commit it to a specific value, and do not revert it.
+
 ### Two-Repo Rule
 
 When a bug or change involves both repos, always check which repo owns the relevant file before editing. Root causes are often in `gtex62-core` even when the symptom appears in the OSA display. Examples:

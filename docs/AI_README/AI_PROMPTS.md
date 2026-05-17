@@ -206,6 +206,34 @@ Do not rewrite unrelated documentation.
 
 ---
 
+## Two-Repo Change Prompt
+
+```text
+This change spans both gtex62-osa (suite) and gtex62-core (engine/providers).
+
+Repos:
+- Suite:  ~/.config/conky/gtex62-osa/
+- Core:   ~/.config/conky/gtex62-core/
+
+Rules:
+- Identify which repo owns each file before editing.
+- Do not put suite-specific code in core, or core provider code in the suite.
+- Commit and push each repo separately when done.
+- If a profile TOML is added or changed in core, check whether bootstrap must be re-run:
+    bash ~/.config/conky/gtex62-core/bin/gtex62-core-bootstrap-runtime
+
+Change needed:
+[describe the change]
+
+Files likely involved:
+- Suite: [list suite files]
+- Core:  [list core files]
+
+Apply the smallest safe change in each repo. Show which repo each edit belongs to.
+```
+
+---
+
 ## Code Review Prompt
 
 ```text
