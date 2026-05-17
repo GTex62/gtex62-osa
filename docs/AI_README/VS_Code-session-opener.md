@@ -6,10 +6,10 @@ Open both repos so edits in either are visible:
 
 ```bash
 code ~/.config/conky/gtex62-osa
-code ~/.config/conky/gtex62-core   # open in same window or new window
+code --add ~/.config/conky/gtex62-core   # open in same window or new window
 ```
 
-## First message to Claude Code
+## First message to AI
 
 ```text
 Read docs/AI_README/AI_CONTEXT.md first and treat it as authoritative.
