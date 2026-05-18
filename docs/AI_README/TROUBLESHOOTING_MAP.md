@@ -70,7 +70,7 @@ TTL: 1 second (VLAN/ping are fast-track meters). WAN IP is rate-limited to 30s i
 ### Likely File Categories
 
 | Layer | Exact Path |
-|---|---|
+| --- | --- |
 | Display | `lua/ui/frame.lua` (NET panel section) |
 | Data module | `lua/suite/net.lua` |
 | Provider | `gtex62-core/providers/net/fetch_net.sh` |
@@ -119,7 +119,7 @@ Smallest safe fix:
 ### Likely File Categories
 
 | Layer | What to Inspect |
-|---|---|
+| --- | --- |
 | Startup entry | Linux Mint Startup Applications command |
 | Startup script | Main suite launch script |
 | Interactive menus | Palette/wallpaper/menu scripts |
@@ -153,7 +153,7 @@ Smallest safe fix:
 ### Likely File Categories
 
 | Layer | What to Inspect |
-|---|---|
+| --- | --- |
 | Palette definitions | Palette file/module |
 | Palette selector | Menu or selection script |
 | State/cache | File storing selected palette |
@@ -184,7 +184,7 @@ Smallest safe fix:
 ### Likely File Categories
 
 | Layer | What to Inspect |
-|---|---|
+| --- | --- |
 | API/env | Env file containing API key/config |
 | Fetch script | Weather/pollution/pollen data script |
 | Cache | JSON/text cache files |
@@ -217,7 +217,7 @@ Smallest safe fix:
 ### Likely File Categories
 
 | Layer | What to Inspect |
-|---|---|
+| --- | --- |
 | Display | Storage table drawing file |
 | Data source | `df`, Home Assistant sensor, NAS script, or cache |
 | Config | Mount path definitions |
@@ -269,7 +269,7 @@ bash ~/.config/conky/gtex62-core/providers/time/fetch_time.sh local
 ### Likely File Categories
 
 | Layer | Exact Path |
-|---|---|
+| --- | --- |
 | Cache (authoritative) | `~/.cache/gtex62-core/shared/time/local/current.json` |
 | Provider | `gtex62-core/providers/time/fetch_time.sh` |
 | Runtime profile | `~/.config/gtex62-core/profiles/time/local.toml` |
@@ -307,7 +307,7 @@ Weather TTL: 300s. Session-start STALE threshold: 450s (data must be older than 
 ### Likely File Categories
 
 | Layer | Exact Path |
-|---|---|
+| --- | --- |
 | Data module | `lua/suite/wxr.lua` |
 | Provider | `gtex62-core/providers/weather/fetch_weather.sh` |
 | Cache | `~/.cache/gtex62-core/shared/weather/home/current.json` |
@@ -346,7 +346,7 @@ Orb TTL: 60s. Location resolved from: env LAT/LON → astro cache → astro prof
 ### Likely File Categories
 
 | Layer | Exact Path |
-|---|---|
+| --- | --- |
 | Data module | `lua/suite/orb.lua` |
 | Provider | `gtex62-core/providers/orb/fetch_orb.py` |
 | Shell wrapper | `gtex62-core/providers/orb/fetch_orb.sh` |

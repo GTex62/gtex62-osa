@@ -51,7 +51,7 @@ ls ~/.config/gtex62-core/profiles/time/
 When a bug or change involves both repos, always check which repo owns the relevant file before editing. Root causes are often in `gtex62-core` even when the symptom appears in the OSA display. Examples:
 
 | Symptom | Root cause repo |
-|---|---|
+| --- | --- |
 | Clock timezone name wrong in display | `gtex62-core/providers/time/fetch_time.sh` |
 | VLAN/ping meters frozen | `gtex62-core/providers/net/fetch_net.sh` or profile TOML |
 | Orb/planet data missing | `gtex62-core/providers/orb/fetch_orb.py` |
@@ -88,7 +88,7 @@ Start with:
 Use this rule:
 
 | Task Type | Read |
-|---|---|
+| --- | --- |
 | General coding task | `AI_CONTEXT.md` + relevant source file |
 | NET panel issue | `AI_CONTEXT.md` + `TROUBLESHOOTING_MAP.md` + `lua/suite/net.lua` + `gtex62-core/providers/net/fetch_net.sh` |
 | WXR/weather issue | `AI_CONTEXT.md` + `TROUBLESHOOTING_MAP.md` + `lua/suite/wxr.lua` |
@@ -118,7 +118,7 @@ Do not scan unrelated panels unless a relevant file directly references them.
 ## Common Project Areas
 
 | Area | Exact Path |
-|---|---|
+| --- | --- |
 | Suite root | `~/.config/conky/gtex62-osa/` |
 | Core/engine root | `~/.config/conky/gtex62-core/` |
 | Lua drawing code | `~/.config/conky/gtex62-osa/lua/ui/frame.lua` |
