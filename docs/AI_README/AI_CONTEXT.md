@@ -132,6 +132,7 @@ Do not scan unrelated panels unless a relevant file directly references them.
 | Runtime profiles | `~/.config/gtex62-core/profiles/<domain>/<profile>.toml` |
 | Suite TOML | `~/.config/gtex62-core/suites/osa.toml` |
 | Documentation | `~/.config/conky/gtex62-osa/docs/` |
+| Core architecture doc | `~/.config/conky/gtex62-core/docs/architecture.md` |
 | Runbooks | `/mnt/NAS_Data/Data/Linux/backups/_docs/` |
 
 ---
