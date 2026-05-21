@@ -114,6 +114,44 @@ local function fill_rect(cr, x, y, w, h, color)
   cairo_fill(cr)
 end
 
+local function resolve_scale(layout)
+  local mode = layout and layout.scale_mode or "manual"
+  if mode == "auto" then
+    local w = tonumber(os.getenv("CONKY_SCREEN_W"))
+    local h = tonumber(os.getenv("CONKY_SCREEN_H"))
+    local bw = layout.frame and tonumber(layout.frame.width)
+    local bh = layout.frame and tonumber(layout.frame.height)
+    if w and h and bw and bh and bw > 0 and bh > 0 then
+      return math.min(w / bw, h / bh)
+    end
+  end
+  return tonumber(layout and layout.scale) or 1.0
+end
+
+local function panel_col_x(panel, layout)
+  local cols = layout and layout.columns
+  local col = panel and panel.column
+  if col and cols and cols[col] then
+    return tonumber(cols[col].x) or (tonumber(panel.x) or 0)
+  end
+  return tonumber(panel.x) or 0
+end
+
+local function resolve_panels(panels_tbl, layout)
+  local resolved = {}
+  for name, panel in pairs(panels_tbl) do
+    if type(panel) == "table" then
+      local rp = {}
+      for k, v in pairs(panel) do rp[k] = v end
+      rp.x = panel_col_x(panel, layout)
+      resolved[name] = rp
+    else
+      resolved[name] = panel
+    end
+  end
+  return resolved
+end
+
 local function draw_soft_circle(cr, cx, cy, radius_x, radius_y, color, alpha)
   alpha = tonumber(alpha) or 1.0
   radius_y = tonumber(radius_y) or radius_x
@@ -3031,6 +3069,14 @@ local function draw_env_content(cr, theme, layout, panels, data)
 end
 
 function M.draw(cr, theme, layout, panels, data)
+  local scale = resolve_scale(layout)
+  local rpanels = resolve_panels(panels, layout)
+
+  if scale ~= 1.0 then
+    cairo_save(cr)
+    cairo_scale(cr, scale, scale)
+  end
+
   fill_rect(
     cr,
     layout.frame.x,
@@ -3043,12 +3089,12 @@ function M.draw(cr, theme, layout, panels, data)
   draw_frame_shadow(cr, layout.frame, theme)
 
   for _, panel in ipairs({
-    panels.sys,
-    panels.tme,
-    panels.wxr,
-    panels.net,
-    panels.orb,
-    panels.env,
+    rpanels.sys,
+    rpanels.tme,
+    rpanels.wxr,
+    rpanels.net,
+    rpanels.orb,
+    rpanels.env,
   }) do
     draw_rect(
       cr,
@@ -3078,12 +3124,16 @@ function M.draw(cr, theme, layout, panels, data)
     theme.strokes.frame_alpha
   )
 
-  draw_sys_content(cr, theme, layout, panels, data)
-  draw_tme_content(cr, theme, layout, panels, data)
-  draw_wxr_content(cr, theme, layout, panels, data)
-  draw_net_content(cr, theme, layout, panels, data)
-  draw_orb_content(cr, theme, layout, panels, data)
-  draw_env_content(cr, theme, layout, panels, data)
+  draw_sys_content(cr, theme, layout, rpanels, data)
+  draw_tme_content(cr, theme, layout, rpanels, data)
+  draw_wxr_content(cr, theme, layout, rpanels, data)
+  draw_net_content(cr, theme, layout, rpanels, data)
+  draw_orb_content(cr, theme, layout, rpanels, data)
+  draw_env_content(cr, theme, layout, rpanels, data)
+
+  if scale ~= 1.0 then
+    cairo_restore(cr)
+  end
 end
 
 return M

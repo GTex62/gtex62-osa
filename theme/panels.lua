@@ -1,6 +1,7 @@
 local panels = {
   sys = {
     title = "SYS",
+    column = "left",
     x = 28,
     y = 40,
     width = 520,
@@ -31,6 +32,7 @@ local panels = {
   },
   tme = {
     title = "TME",
+    column = "mid",
     x = 604,
     y = 40,
     width = 520,
@@ -54,6 +56,7 @@ local panels = {
   },
   wxr = {
     title = "WXR",
+    column = "right",
     x = 1188,
     y = 40,
     width = 520,
@@ -84,6 +87,7 @@ local panels = {
   },
   net = {
     title = "NET",
+    column = "left",
     x = 28,
     y = 880,
     width = 520,
@@ -107,6 +111,7 @@ local panels = {
   },
   orb = {
     title = "ORB",
+    column = "mid",
     footer_label = "OPERATIONAL SYSTEM ARCHITECTURE",
     footer_label_font_pt = 14,
     footer_machine_label_font_pt = 12,
@@ -137,6 +142,7 @@ local panels = {
   },
   env = {
     title = "ENV",
+    column = "right",
     x = 1188,
     y = 978,
     width = 520,

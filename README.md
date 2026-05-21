@@ -21,6 +21,9 @@ runtime model, provider orchestration, normalized cache, and shared setup.
 - [Repository Layout](#repository-layout)
 - [Panel Map](#panel-map)
 - [Customization](#customization)
+  - [Scale](#scale)
+  - [Column positions](#column-positions)
+  - [Palette](#palette)
 - [Troubleshooting](#troubleshooting)
 - [Engine-Suite Template Notes](#engine-suite-template-notes)
 - [License](#license)
@@ -277,9 +280,40 @@ Start with these files:
 - [theme/osa-theme.lua](theme/osa-theme.lua): colors, fonts, meter styling,
   table sizing, panel internals.
 - [theme/panels.lua](theme/panels.lua): panel positions and box geometry.
-- [theme/osa-layout.lua](theme/osa-layout.lua): frame/window layout.
+- [theme/osa-layout.lua](theme/osa-layout.lua): frame dimensions, column
+  positions, and suite scale.
 - [widgets/osa-main.conky.conf](widgets/osa-main.conky.conf): Conky window and
   update interval.
+
+### Scale
+
+The entire suite — geometry, line weights, and fonts — scales from two fields
+in `theme/osa-layout.lua`:
+
+```lua
+layout.scale_mode = "manual"   -- "manual" or "auto"
+layout.scale      = 1.0        -- active when scale_mode = "manual"
+```
+
+In `"manual"` mode, `layout.scale` is a fixed multiplier applied to all
+drawing. Values above `1.0` enlarge the suite; values below shrink it.
+`0.75` and `1.25` are reasonable bounds for most monitors.
+
+In `"auto"` mode, the scale is computed from the environment variables
+`CONKY_SCREEN_W` and `CONKY_SCREEN_H` against the base frame dimensions
+(`1736 × 1368`). Export both before launching Conky and the suite will fit the
+screen proportionally without any manual tuning.
+
+Restart Conky after changing `scale` or `scale_mode`.
+
+### Column positions
+
+Column x positions are defined in `layout.columns` in `theme/osa-layout.lua`
+and are the authoritative source for panel placement. Changing a column x there
+moves all panels in that column. `theme/panels.lua` owns the per-panel
+y-position, height, and box geometry.
+
+### Palette
 
 OSA supports a simple monochrome palette selector through `CONKY_OSA_PALETTE`.
 Available palettes are defined in [theme/osa-palettes.lua](theme/osa-palettes.lua);
