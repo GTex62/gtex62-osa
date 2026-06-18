@@ -2020,10 +2020,11 @@ local function draw_tme_content(cr, theme, layout, panels, data)
   local date_w = tonumber(cfg.date_w) or 72
   local name_w = tonumber(cfg.name_w) or 224
   local name_pad_x = tonumber(cfg.name_pad_x) or 8
+  local clock_relative = (((theme or {}).tme or {}).clock_relative == true)
 
   local cols = {
     { label = "ZONE", width = zone_w },
-    { label = "OFF", width = off_w },
+    { label = clock_relative and "REL" or "OFF", width = off_w },
     { label = "TIME", width = time_w },
     { label = "DATE", width = date_w },
     { label = "NAME", width = name_w },
@@ -2046,6 +2047,23 @@ local function draw_tme_content(cr, theme, layout, panels, data)
   )
 
   local rows = tme_data.clock_rows()
+  if clock_relative then
+    local lz = tostring(os.date("%z"))        -- e.g. "-0500"
+    local ls = lz:sub(1, 1)
+    local lh = tonumber(lz:sub(2, 3)) or 0
+    if ls == "-" then lh = -lh end
+    local rel = {}
+    for _, row in ipairs(rows) do
+      local r = {}
+      for k, v in pairs(row) do r[k] = v end
+      local s = (row.off or "+00"):sub(1, 1)
+      local h = tonumber((row.off or "+00"):sub(2, 3)) or 0
+      if s == "-" then h = -h end
+      r.off = string.format("%+03d", h - lh)
+      rel[#rel + 1] = r
+    end
+    rows = rel
+  end
   for i, row in ipairs(rows) do
     local mid_y = row_y + ((i - 1) * row_step)
     local zone_x = table_x

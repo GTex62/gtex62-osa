@@ -479,6 +479,7 @@ theme.net = {
 -- Time Section
 ----------------------------------------------------------------
 theme.tme = {
+  clock_relative = false,   -- true: REL mode, offsets relative to local timezone (+00)
   status = {
     x = 46,
     y = 36,
@@ -615,7 +616,7 @@ theme.wxr = {
     metar_font_pt = 14,
     metar_line_step = 14,
     metar_max_lines = 7,
-    metar_wrap_col = 58,
+    metar_wrap_col = 53,
   },
   forecast = {
     x = 16,
@@ -634,7 +635,7 @@ theme.wxr = {
     taf_font_pt = 14,
     taf_line_step = 14,
     taf_max_lines = 8,
-    taf_wrap_col = 58,
+    taf_wrap_col = 53,
     taf_indent_cols = 2,
   },
   station_model = {
