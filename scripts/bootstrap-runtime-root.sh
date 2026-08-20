@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUITE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CORE_REPO="${GTEX62_CORE_DIR:-${GTEX62_CONKY_ENGINE_DIR:-$HOME/.config/conky/gtex62-core}}"
-CORE_BOOTSTRAP="${GTEX62_CORE_BOOTSTRAP:-$CORE_REPO/bin/gtex62-core-bootstrap-runtime}"
+CORE_BOOTSTRAP="${GTEX62_CORE_BOOTSTRAP:-$CORE_REPO/scripts/bootstrap-runtime-root.sh}"
 
 export CONKY_SUITE_DIR="$SUITE_DIR"
 
