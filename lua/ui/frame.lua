@@ -787,6 +787,58 @@ local function draw_hbar(cr, x, y, w, h, ratio, color)
   fill_rect(cr, x, y, fill_w, h, color)
 end
 
+-- Right-anchored variant: fills grow leftward from x_right. Used by the
+-- bidirectional VLAN bar's IN side (OUT reuses draw_hbar as-is).
+local function draw_hbar_right_anchored(cr, x_right, y, w, h, ratio, color)
+  local numeric = tonumber(ratio) or 0
+  local clamped = math.max(0, math.min(1, numeric))
+  local fill_w = math.floor((w * clamped) + 0.5)
+  if fill_w <= 0 then return end
+  fill_rect(cr, x_right - fill_w, y, fill_w, h, color)
+end
+
+--- Draws a row of glyph-based dashes across [x_from, x_to] (slot_count
+--- evenly spaced slots), using the same technique as ORB Celestial's
+--- rise/set bracket (see orb_visible_slots/draw_orb_content above): "-"
+--- glyphs from theme.fonts.data, not drawn rectangles. When cap_style is
+--- "bracket", both ends are capped — "[" in the leftmost (x_from) slot,
+--- "]" in the rightmost (x_to) slot, exactly like orb_visible_slots'
+--- start_slot/end_slot (single-slot case collapses to "[]", same as
+--- there). cap_style = "none" leaves every slot as "-" (open-ended
+--- track). Used by the VLAN track view's per-row rail
+--- (design/osa-design-notes.md's "Third view: track").
+local function draw_glyph_track(cr, x_from, x_to, mid_y, slot_count, cap_style, font, font_pt, band_y_nudge, color)
+  slot_count = math.max(1, math.floor(slot_count or 1))
+  local slot_w = (x_to - x_from) / slot_count
+
+  for i = 1, slot_count do
+    local glyph = "-"
+    if cap_style == "bracket" then
+      if slot_count == 1 then
+        glyph = "[]"
+      elseif i == 1 then
+        glyph = "["
+      elseif i == slot_count then
+        glyph = "]"
+      end
+    end
+    local glyph_y = mid_y
+    if glyph == "-" then
+      glyph_y = mid_y + band_y_nudge
+    end
+    draw_text_center_mid(
+      cr,
+      x_from + ((i - 0.5) * slot_w),
+      glyph_y,
+      glyph,
+      font,
+      font_pt,
+      color,
+      CAIRO_FONT_WEIGHT_NORMAL
+    )
+  end
+end
+
 local function draw_env_meter(cr, theme, x, y, w, cfg, label, value, bar_specs, footer_left, footer_right)
   local header_h = tonumber(cfg.header_h) or 16
   local footer_h = tonumber(cfg.footer_h) or 16
@@ -2410,6 +2462,11 @@ local function draw_net_content(cr, theme, layout, panels, data)
     local table_w = tonumber(vlan_cfg.width) or 456
     local header_gap = tonumber(vlan_cfg.header_gap) or 2
     local gateway_w = tonumber(vlan_cfg.gateway_w) or 148
+    -- name_w: bidir and track's NAME column (short labels — WAN/HOME/IOT/
+    -- INFRA/CAM). Separate from classic's gateway_w (IP addresses need the
+    -- extra width) so shrinking one doesn't touch the other; falls back to
+    -- gateway_w when unset.
+    local name_w = tonumber(vlan_cfg.name_w) or gateway_w
     local ms_w = tonumber(vlan_cfg.ms_w) or 56
     local speed_w = table_w - gateway_w - ms_w - (header_gap * 2)
     local header_h = tonumber(vlan_cfg.header_h) or 16
@@ -2419,6 +2476,158 @@ local function draw_net_content(cr, theme, layout, panels, data)
     local cell_font_pt = tonumber(vlan_cfg.cell_font_pt) or 14
     local speed_bar_h = tonumber(vlan_cfg.speed_bar_h) or 8
     local speed_bar_inset_x = tonumber(vlan_cfg.speed_bar_inset_x) or 8
+    local view = "classic"
+    if vlan_cfg.view == "bidir" or vlan_cfg.view == "track" then
+      view = vlan_cfg.view
+    end
+
+    if view == "bidir" then
+      -- NAME | center-anchored IN/OUT bar. No MS column — its width folds
+      -- into the bar. Split between IN/OUT is negative space (bidir_center_gap),
+      -- not a drawn divider line.
+      local bidir_w = table_w - name_w - header_gap
+      local center_gap = tonumber(vlan_cfg.bidir_center_gap) or 4
+
+      draw_table_header(cr, table_x, table_y, name_w, header_h, "NAME", header_font_pt, theme)
+      draw_table_header(cr, table_x + name_w + header_gap, table_y, bidir_w, header_h, "SPEED", header_font_pt, theme)
+
+      draw_rect(cr, table_x, table_y + header_h + 1, table_w, 1, theme.strokes.line, theme.colors.fg)
+
+      local grid_y = table_y + header_h + 2
+      local rows = type(net_data.vlan_bidir_rows) == "function" and net_data.vlan_bidir_rows() or {}
+      local body_h = row_h * math.min(#rows, row_count)
+      local separator_x = table_x + name_w + (header_gap * 0.5)
+
+      if body_h > 0 then
+        draw_rect(cr, separator_x, grid_y, 1, body_h, theme.strokes.line, theme.colors.fg)
+      end
+
+      local bar_x0 = table_x + name_w + header_gap + speed_bar_inset_x
+      local bar_x1 = table_x + name_w + header_gap + bidir_w - speed_bar_inset_x
+      local bar_center = (bar_x0 + bar_x1) / 2
+      local half_w = math.max(0, ((bar_x1 - bar_x0) - center_gap) / 2)
+
+      for i = 1, math.min(#rows, row_count) do
+        local row = rows[i]
+        local mid_y = grid_y + ((i - 1) * row_h) + (row_h / 2)
+
+        draw_text_center_mid(
+          cr,
+          table_x + (name_w * 0.5),
+          mid_y,
+          row.name or "",
+          theme.fonts.data,
+          cell_font_pt,
+          theme.colors.fg,
+          CAIRO_FONT_WEIGHT_NORMAL
+        )
+
+        local bar_y = mid_y - (speed_bar_h / 2)
+        local in_ratio = tonumber(row.in_pct) or 0
+        local out_ratio = tonumber(row.out_pct) or 0
+
+        draw_hbar_right_anchored(cr, bar_center - (center_gap * 0.5), bar_y, half_w, speed_bar_h, in_ratio, theme.colors.fg)
+        draw_hbar(cr, bar_center + (center_gap * 0.5), bar_y, half_w, speed_bar_h, out_ratio, theme.colors.fg)
+      end
+
+      return
+    end
+
+    if view == "track" then
+      -- NAME | static dashed bracket track. Same NAME/no-MS layout as
+      -- bidir; IN/OUT markers ride a fixed track from the center split
+      -- (idle) out to the track's outer end-cap (busy). Geometry knobs are
+      -- deliberately separate from bidir's bar knobs — different visual
+      -- metaphor, same underlying in_pct/out_pct data. Marker size/style
+      -- reuses theme.orb.celestial.marker_size, not a new knob here. See
+      -- design/osa-design-notes.md's "Third view: track" section.
+      local track_col_w = table_w - name_w - header_gap
+      local center_gap = tonumber(vlan_cfg.track_center_gap) or 4
+      local track_len = tonumber(vlan_cfg.track_len) or 96
+      local slot_count = tonumber(vlan_cfg.track_slot_count) or 12
+      local glyph_font_pt = tonumber(vlan_cfg.track_glyph_font_pt) or 16
+      local band_y_nudge = tonumber(vlan_cfg.track_band_y_nudge) or 4
+      local cap_style = vlan_cfg.track_cap_style == "none" and "none" or "bracket"
+      local label_font_pt = tonumber(vlan_cfg.track_label_font_pt) or 12
+      local label_gap_y = tonumber(vlan_cfg.track_label_gap_y) or 14
+      local label_y_nudge = tonumber(vlan_cfg.track_label_y_nudge) or 0
+      local marker_size = tonumber((((theme or {}).orb or {}).celestial or {}).marker_size) or 8
+
+      draw_table_header(cr, table_x, table_y, name_w, header_h, "NAME", header_font_pt, theme)
+      draw_table_header(cr, table_x + name_w + header_gap, table_y, track_col_w, header_h, "SPEED", header_font_pt, theme)
+
+      draw_rect(cr, table_x, table_y + header_h + 1, table_w, 1, theme.strokes.line, theme.colors.fg)
+
+      local grid_y = table_y + header_h + 2
+      local rows = type(net_data.vlan_bidir_rows) == "function" and net_data.vlan_bidir_rows() or {}
+      local body_h = row_h * math.min(#rows, row_count)
+      local separator_x = table_x + name_w + (header_gap * 0.5)
+
+      if body_h > 0 then
+        draw_rect(cr, separator_x, grid_y, 1, body_h, theme.strokes.line, theme.colors.fg)
+      end
+
+      local col_x0 = table_x + name_w + header_gap
+      local col_x1 = table_x + name_w + header_gap + track_col_w
+      local col_center = (col_x0 + col_x1) / 2
+      local in_inner = col_center - (center_gap / 2)
+      local in_outer = math.max(col_x0, in_inner - track_len)
+      local out_inner = col_center + (center_gap / 2)
+      local out_outer = math.min(col_x1, out_inner + track_len)
+
+      -- Marker travel is bounded by the bracket glyphs' actual slot
+      -- centers (draw_glyph_track always centers a glyph within its
+      -- slot), not the raw in/out_inner|outer edges — otherwise an idle
+      -- (pct=0) marker lands half a slot past the inner "]"/"[" bracket,
+      -- outside it, at the split.
+      local marker_pad = tonumber(vlan_cfg.track_marker_pad) or 0
+      local in_slot_w = (in_inner - in_outer) / slot_count
+      local in_marker_far = in_outer + (in_slot_w * 0.5)   -- pct=1, at the outer "[" bracket
+      -- pct=0 retreats marker_pad px away from the inner "]" bracket, back
+      -- along the track toward the outer end — not toward the split, which
+      -- would only push it closer to the OUT marker on the other side of
+      -- the gap. Clamped so it can never retreat past marker_far (pct=1),
+      -- which would invert idle/busy ordering.
+      local in_marker_near = math.max(in_marker_far, (in_inner - (in_slot_w * 0.5)) - marker_pad)
+      local out_slot_w = (out_outer - out_inner) / slot_count
+      local out_marker_far = out_outer - (out_slot_w * 0.5)  -- pct=1, at the outer "]" bracket
+      local out_marker_near = math.min(out_marker_far, (out_inner + (out_slot_w * 0.5)) + marker_pad)
+
+      for i = 1, math.min(#rows, row_count) do
+        local row = rows[i]
+        local mid_y = grid_y + ((i - 1) * row_h) + (row_h / 2)
+
+        draw_text_center_mid(
+          cr,
+          table_x + (name_w * 0.5),
+          mid_y,
+          row.name or "",
+          theme.fonts.data,
+          cell_font_pt,
+          theme.colors.fg,
+          CAIRO_FONT_WEIGHT_NORMAL
+        )
+
+        draw_glyph_track(cr, in_outer, in_inner, mid_y, slot_count, cap_style, theme.fonts.data, glyph_font_pt, band_y_nudge, theme.colors.fg)
+        draw_glyph_track(cr, out_inner, out_outer, mid_y, slot_count, cap_style, theme.fonts.data, glyph_font_pt, band_y_nudge, theme.colors.fg)
+
+        local in_ratio = math.max(0, math.min(1, tonumber(row.in_pct) or 0))
+        local out_ratio = math.max(0, math.min(1, tonumber(row.out_pct) or 0))
+        local in_marker_x = in_marker_near - (in_ratio * (in_marker_near - in_marker_far))
+        local out_marker_x = out_marker_near + (out_ratio * (out_marker_far - out_marker_near))
+
+        fill_rect(cr, in_marker_x - (marker_size / 2), mid_y - math.floor(marker_size / 2), marker_size, marker_size, theme.colors.fg)
+        fill_rect(cr, out_marker_x - (marker_size / 2), mid_y - math.floor(marker_size / 2), marker_size, marker_size, theme.colors.fg)
+      end
+
+      if body_h > 0 then
+        local label_y = grid_y + body_h + label_gap_y + label_y_nudge
+        draw_text_center_mid(cr, (col_x0 + col_center) / 2, label_y, "IN", theme.fonts.data, label_font_pt, theme.colors.fg, CAIRO_FONT_WEIGHT_NORMAL)
+        draw_text_center_mid(cr, (col_center + col_x1) / 2, label_y, "OUT", theme.fonts.data, label_font_pt, theme.colors.fg, CAIRO_FONT_WEIGHT_NORMAL)
+      end
+
+      return
+    end
 
     draw_table_header(cr, table_x, table_y, gateway_w, header_h, "GATEWAY", header_font_pt, theme)
     draw_table_header(cr, table_x + gateway_w + header_gap, table_y, speed_w, header_h, "SPEED", header_font_pt, theme)

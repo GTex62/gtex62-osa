@@ -463,7 +463,11 @@ theme.net = {
     y = 16,
     width = 456,
     header_gap = 2,
-    gateway_w = 116,
+    gateway_w = 116, -- classic view's GATEWAY column (IP addresses) — untouched by name_w below
+    -- bidir and track's NAME column (short labels — WAN/HOME/IOT/INFRA/
+    -- CAM). Separate from gateway_w so it can be narrower without
+    -- affecting classic; falls back to gateway_w when unset.
+    name_w = 64,
     ms_w = 56,
     header_h = 16,
     header_font_pt = 18,
@@ -472,6 +476,82 @@ theme.net = {
     cell_font_pt = 15,
     speed_bar_h = 8,
     speed_bar_inset_x = 16,
+
+    -- view: "classic" (GATEWAY/SPEED, single left-to-right bar, MS column),
+    -- "bidir" (NAME/SPEED, center-anchored bar — IN grows left, OUT grows
+    -- right, split is negative space not a drawn line; no MS column, its
+    -- width folds into the bar), or "track" (NAME/SPEED, static dashed
+    -- bracket track per row — IN/OUT markers slide from center [idle] to
+    -- the track's outer edge [busy]; same negative-space center split,
+    -- same NAME/no-MS layout as bidir. See design/osa-design-notes.md's
+    -- "Third view: track" section).
+    view = "track",
+    bidir_center_gap = 4, -- px of negative space at the IN/OUT split
+    bidir_alpha = 0.35,   -- EMA smoothing on the scaled (0..1) value, post scale-curve (bidir view only)
+
+    -- track view geometry — deliberately separate from the bidir knobs
+    -- above (different visual metaphor, same underlying in_pct/out_pct
+    -- data). Marker size/style is NOT a knob here: it reuses
+    -- theme.orb.celestial.marker_size directly, per design doc.
+    --
+    -- The track/bracket itself is drawn with the same technique as ORB
+    -- Celestial's rise/set bracket (orb_visible_slots / draw_orb_content)
+    -- — "-"/"["/"]" glyphs from theme.fonts.data tiled across evenly
+    -- spaced slots, not drawn rectangles — so it reads as the same visual
+    -- language as ORB's bracket, not a lookalike built a different way.
+    track_center_gap = 6,        -- px of negative space at the IN/OUT split
+    track_len = 186,             -- px from split (idle) to outer end-cap (busy); marker's max travel
+    track_slot_count = 21,       -- glyph slots per half, tiled across track_len
+    track_glyph_font_pt = 16,    -- font size for the "-"/"["/"]" glyphs (matches ORB's row_font_pt default)
+    track_band_y_nudge = 4,      -- vertical nudge for "-" glyphs only, matches ORB's band_y_nudge
+    track_cap_style = "bracket", -- "bracket" ("[" / "]" glyph in the outermost slot) | "none" (dashes only, open-ended)
+    track_marker_pad = 6,        -- px an idle (pct=0) marker retreats from the inner bracket, back toward the outer end, so it doesn't sit on top of the glyph
+    track_label_font_pt = 12,    -- IN/OUT sub-labels below the table body
+    track_label_gap_y = 14,      -- px gap below the last row to the IN/OUT label baseline
+    track_label_y_nudge = -12,   -- px fine-tune on top of the gap above; negative moves IN/OUT up
+
+    -- Per-VLAN link caps (Mbps) for scale_pct() normalization, ported
+    -- verbatim from gtex62-tech-hud's theme-pf.lua (link_mbps_in/out). Only
+    -- the 5 rows this view displays (WAN/HOME/IOT/INFRA/CAM) — no GUEST.
+    link_mbps_in = {
+      WAN   = 500, -- per tests (~589 Mbps down), make 100% ≈ 700 Mbps headroom
+      HOME  = 100,
+      IOT   = 100,
+      INFRA = 100,
+      CAM   = 100,
+    },
+    link_mbps_out = {
+      WAN   = 50, -- ~50 Mbps is a sensible cap
+      HOME  = 100,
+      IOT   = 100,
+      INFRA = 100,
+      CAM   = 100,
+    },
+
+    -- Nonlinear response curve driven by scale_pct(), ported verbatim from
+    -- tech-hud's theme-pf.lua/pf_widget.lua. mode: "linear" | "sqrt" | "log".
+    scale = {
+      mode = "sqrt",
+
+      sqrt = {
+        gamma = 0.35, -- 0.25-0.4: very sensitive, 0.45-0.6: balanced, 0.7-0.8: conservative
+      },
+
+      log = {
+        base     = 4.0,
+        min_norm = 0.0008,
+      },
+
+      -- Per-VLAN floors (Mbps), subtracted before normalization to kill
+      -- idle jitter. Tech-hud's tuned values are all 0 across the board.
+      floors_mbps = {
+        WAN   = 0,
+        HOME  = 0,
+        IOT   = 0,
+        INFRA = 0,
+        CAM   = 0,
+      },
+    },
   },
 }
 
@@ -479,7 +559,7 @@ theme.net = {
 -- Time Section
 ----------------------------------------------------------------
 theme.tme = {
-  clock_relative = false,   -- true: REL mode, offsets relative to local timezone (+00)
+  clock_relative = true, -- true: REL mode, offsets relative to local timezone (+00)
   status = {
     x = 46,
     y = 36,
