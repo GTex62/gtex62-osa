@@ -56,9 +56,30 @@ wait_pid_file_exit() {
 
 stop_pid_file "$LAUNCHER_PID_FILE"
 stop_pid_file "$CONKY_PID_FILE"
-pkill -x conky 2>/dev/null || true
+# Scoped to this suite's own conky windows only (matches gtex62-clean-suite-e's
+# convention) — a blanket `pkill -x conky` here would also kill any other
+# suite's conky (e.g. gtex62-sitrep) running at the same time.
+pkill -f "$SUITE_DIR/widgets/" 2>/dev/null || true
 wait_pid_file_exit "$LAUNCHER_PID_FILE"
 wait_pid_file_exit "$CONKY_PID_FILE"
+
+# -- Enforce suite exclusivity ---------------------------------------------
+# Only one main suite may run at a time; SitRep is the sole exception (it's
+# allowed to run alongside any main suite), so it's skipped here. Match on
+# each other suite's widgets/ path — the same scoped convention used above
+# for this suite's own self-stop — rather than a blanket `pkill -x conky`,
+# so SitRep is never touched. Killing a suite's conky window is enough to
+# bring the whole suite down: a core-launcher-managed suite blocks on
+# `wait "$CONKY_PID"` and exits once it's gone, and its refresh loops
+# self-terminate on their next `kill -0 "$CONKY_PID"` check.
+CONKY_ROOT="$(dirname "$SUITE_DIR")"
+for other_dir in "$CONKY_ROOT"/*/; do
+  other_dir="${other_dir%/}"
+  [[ "$other_dir" == "$SUITE_DIR" ]] && continue
+  [[ "$(basename "$other_dir")" == "gtex62-sitrep" ]] && continue
+  [[ -d "$other_dir/widgets" ]] || continue
+  pkill -f "$other_dir/widgets/" 2>/dev/null || true
+done
 
 choose_palette() {
   local palette_file="$SUITE_DIR/theme/osa-palettes.lua"
@@ -104,6 +125,28 @@ choose_palette() {
   [[ "${#PALETTES[@]}" -gt 0 ]] || return 0
 
   mkdir -p "$cache_dir"
+
+  # Combo hand-off: if a palette override was passed in (e.g. by conk's
+  # "osa + sitrep" combo launch), use it directly instead of prompting,
+  # as long as it's a real palette in this suite's own catalog.
+  if [[ -n "${GTEX62_CONKY_PALETTE_OVERRIDE:-}" ]]; then
+    local override_found=""
+    local p=""
+    for p in "${PALETTES[@]}"; do
+      if [[ "$p" == "$GTEX62_CONKY_PALETTE_OVERRIDE" ]]; then
+        override_found="$p"
+        break
+      fi
+    done
+    if [[ -n "$override_found" ]]; then
+      export CONKY_OSA_PALETTE="$override_found"
+      echo "$CONKY_OSA_PALETTE" > "$cache_last"
+      echo "OSA palette: $CONKY_OSA_PALETTE (from combo selection)"
+      return 0
+    else
+      echo "Warning: palette '$GTEX62_CONKY_PALETTE_OVERRIDE' not found for OSA; prompting instead."
+    fi
+  fi
 
   if [[ -f "$cache_last" ]]; then
     last="$(cat "$cache_last" 2>/dev/null || true)"
@@ -171,6 +214,38 @@ choose_wallpaper() {
   fi
 
   mkdir -p "$cache_dir"
+
+  # Combo hand-off: if a wallpaper override was passed in, use it directly
+  # instead of prompting, as long as it's "none" or a real file in this
+  # suite's wallpaper directory (which is shared across suites anyway).
+  if [[ -n "${GTEX62_CONKY_WALLPAPER_OVERRIDE:-}" ]]; then
+    if [[ "$GTEX62_CONKY_WALLPAPER_OVERRIDE" == "none" ]]; then
+      echo "none" > "$cache_last"
+      echo "OSA wallpaper: none (from combo selection)"
+      return 0
+    fi
+    local override_found=""
+    local w=""
+    for w in "${WALLS[@]}"; do
+      if [[ "$w" == "$GTEX62_CONKY_WALLPAPER_OVERRIDE" ]]; then
+        override_found="$w"
+        break
+      fi
+    done
+    if [[ -n "$override_found" ]]; then
+      local wallpaper_path="$WALLPAPER_DIR/$override_found"
+      echo "$override_found" > "$cache_last"
+      echo "OSA wallpaper: $override_found (from combo selection)"
+      if command -v feh >/dev/null 2>&1; then
+        feh --no-xinerama --bg-fill "$wallpaper_path" || echo "feh failed; continuing without changing wallpaper."
+      else
+        echo "feh not found; skipping wallpaper apply."
+      fi
+      return 0
+    else
+      echo "Warning: wallpaper '$GTEX62_CONKY_WALLPAPER_OVERRIDE' not found; prompting instead."
+    fi
+  fi
 
   if [[ -f "$cache_last" ]]; then
     last="$(cat "$cache_last" 2>/dev/null || true)"
