@@ -2489,7 +2489,7 @@ local function draw_net_content(cr, theme, layout, panels, data)
       local center_gap = tonumber(vlan_cfg.bidir_center_gap) or 4
 
       draw_table_header(cr, table_x, table_y, name_w, header_h, "NAME", header_font_pt, theme)
-      draw_table_header(cr, table_x + name_w + header_gap, table_y, bidir_w, header_h, "SPEED", header_font_pt, theme)
+      draw_table_header(cr, table_x + name_w + header_gap, table_y, bidir_w, header_h, "TRAFFIC", header_font_pt, theme)
 
       draw_rect(cr, table_x, table_y + header_h + 1, table_w, 1, theme.strokes.line, theme.colors.fg)
 
@@ -2554,7 +2554,7 @@ local function draw_net_content(cr, theme, layout, panels, data)
       local marker_size = tonumber((((theme or {}).orb or {}).celestial or {}).marker_size) or 8
 
       draw_table_header(cr, table_x, table_y, name_w, header_h, "NAME", header_font_pt, theme)
-      draw_table_header(cr, table_x + name_w + header_gap, table_y, track_col_w, header_h, "SPEED", header_font_pt, theme)
+      draw_table_header(cr, table_x + name_w + header_gap, table_y, track_col_w, header_h, "TRAFFIC", header_font_pt, theme)
 
       draw_rect(cr, table_x, table_y + header_h + 1, table_w, 1, theme.strokes.line, theme.colors.fg)
 
