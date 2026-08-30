@@ -254,7 +254,7 @@ end
 function M.status_lines()
   local status = status_block()
   return {
-    "ORBITAL DATA // " .. status.orbital_state,
+    "DATA // " .. status.orbital_state,
     "EPHEMERIS // " .. status.ephemeris_state,
   }
 end
