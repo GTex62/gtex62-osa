@@ -1184,7 +1184,7 @@ function M.status_lines()
   return {
     "DATA // " .. weather_data_state(),
     src_line,
-    string.format("AVT // MTR %sZ | TAF %sZ", format_hhmm_utc(mtr_ts), format_hhmm_utc(taf_ts)),
+    string.format("AVT // METAR %sZ | TAF %sZ", format_hhmm_utc(mtr_ts), format_hhmm_utc(taf_ts)),
   }
 end
 
