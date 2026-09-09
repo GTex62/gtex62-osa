@@ -485,7 +485,7 @@ theme.net = {
     -- the track's outer edge [busy]; same negative-space center split,
     -- same NAME/no-MS layout as bidir. See design/osa-design-notes.md's
     -- "Third view: track" section).
-    view = "track",
+    view = "classic",
     bidir_center_gap = 4, -- px of negative space at the IN/OUT split
     bidir_alpha = 0.35,   -- EMA smoothing on the scaled (0..1) value, post scale-curve (bidir view only)
 
