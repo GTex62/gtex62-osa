@@ -806,7 +806,7 @@ end
 --- start_slot/end_slot (single-slot case collapses to "[]", same as
 --- there). cap_style = "none" leaves every slot as "-" (open-ended
 --- track). Used by the VLAN track view's per-row rail
---- (design/osa-design-notes.md's "Third view: track").
+--- (docs/osa-net-cache.md's "View Modes" section).
 local function draw_glyph_track(cr, x_from, x_to, mid_y, slot_count, cap_style, font, font_pt, band_y_nudge, color)
   slot_count = math.max(1, math.floor(slot_count or 1))
   local slot_w = (x_to - x_from) / slot_count
@@ -2540,7 +2540,7 @@ local function draw_net_content(cr, theme, layout, panels, data)
       -- deliberately separate from bidir's bar knobs — different visual
       -- metaphor, same underlying in_pct/out_pct data. Marker size/style
       -- reuses theme.orb.celestial.marker_size, not a new knob here. See
-      -- design/osa-design-notes.md's "Third view: track" section.
+      -- docs/osa-net-cache.md's "View Modes" section.
       local track_col_w = table_w - name_w - header_gap
       local center_gap = tonumber(vlan_cfg.track_center_gap) or 4
       local track_len = tonumber(vlan_cfg.track_len) or 96

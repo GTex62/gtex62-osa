@@ -478,13 +478,13 @@ theme.net = {
     speed_bar_inset_x = 16,
 
     -- view: "classic" (GATEWAY/SPEED, single left-to-right bar, MS column),
-    -- "bidir" (NAME/SPEED, center-anchored bar — IN grows left, OUT grows
+    -- "bidir" (NAME/TRAFFIC, center-anchored bar — IN grows left, OUT grows
     -- right, split is negative space not a drawn line; no MS column, its
-    -- width folds into the bar), or "track" (NAME/SPEED, static dashed
+    -- width folds into the bar), or "track" (NAME/TRAFFIC, static dashed
     -- bracket track per row — IN/OUT markers slide from center [idle] to
     -- the track's outer edge [busy]; same negative-space center split,
-    -- same NAME/no-MS layout as bidir. See design/osa-design-notes.md's
-    -- "Third view: track" section).
+    -- same NAME/no-MS layout as bidir. See docs/osa-net-cache.md's
+    -- "View Modes" section).
     view = "classic",
     bidir_center_gap = 4, -- px of negative space at the IN/OUT split
     bidir_alpha = 0.35,   -- EMA smoothing on the scaled (0..1) value, post scale-curve (bidir view only)
@@ -492,7 +492,7 @@ theme.net = {
     -- track view geometry — deliberately separate from the bidir knobs
     -- above (different visual metaphor, same underlying in_pct/out_pct
     -- data). Marker size/style is NOT a knob here: it reuses
-    -- theme.orb.celestial.marker_size directly, per design doc.
+    -- theme.orb.celestial.marker_size directly — see docs/osa-net-cache.md.
     --
     -- The track/bracket itself is drawn with the same technique as ORB
     -- Celestial's rise/set bracket (orb_visible_slots / draw_orb_content)
