@@ -5,7 +5,7 @@ The `ORB` panel reads from the shared core `orb` provider cache.
 For the full cache schema, file formats, key reference, location resolution,
 and refresh model see:
 
-- `gtex62-core/docs/orb-provider.md`
+- `gtex62-core/docs/orb-provider-reference.md`
 
 ## OSA-Specific Notes
 

@@ -4,7 +4,7 @@ The `NET` panel reads from the shared core `net` provider cache.
 
 For the full cache schema, file formats, key reference, and refresh model see:
 
-- `gtex62-core/docs/net-provider.md`
+- `gtex62-core/docs/net-provider-reference.md`
 
 ## OSA-Specific Notes
 
