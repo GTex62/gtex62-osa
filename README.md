@@ -74,6 +74,7 @@ Base runtime:
 
 - Conky with Lua + Cairo support, for example `conky-all`
 - `bash`, `jq`, `curl`
+- `python3` (3.11 or newer recommended; `jq` and `python3` are checked at launch)
 - `lua` or Lua support through Conky
 - `lm-sensors` for CPU temperature where available
 - `feh` if you want the launcher to apply shared wallpapers
@@ -110,7 +111,7 @@ Install system packages. Debian / Ubuntu / Mint example:
 
 ```bash
 sudo apt update
-sudo apt install -y conky-all jq curl lua5.4 lm-sensors feh
+sudo apt install -y conky-all jq curl python3 lua5.4 lm-sensors feh
 sudo sensors-detect || true
 ```
 

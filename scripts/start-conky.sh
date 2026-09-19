@@ -23,8 +23,19 @@ export GTEX62_CONKY_SUITE_ID="osa"
 export GTEX62_CONKY_SHARED_ASSETS="$SHARED_ASSETS_ROOT"
 export GTEX62_CONKY_WALLPAPERS_DIR="$WALLPAPER_DIR"
 
+missing_tools=()
+for tool in jq python3; do
+  command -v "$tool" >/dev/null 2>&1 || missing_tools+=("$tool")
+done
+if (( ${#missing_tools[@]} > 0 )); then
+  echo "Missing required tool(s): ${missing_tools[*]}" >&2
+  echo "Most gtex62 data providers depend on jq and python3; without them the meters freeze silently." >&2
+  echo "Install them (see Requirements in $SUITE_DIR/README.md), then run this again." >&2
+  exit 1
+fi
+
 if [[ ! -f "$RUNTIME_ROOT/core.toml" || ! -f "$RUNTIME_ROOT/suites/osa.toml" ]]; then
-  "$SUITE_DIR/scripts/bootstrap-runtime-root.sh" "$RUNTIME_ROOT" >/dev/null
+  "$SUITE_DIR/scripts/bootstrap-runtime-root.sh" "$RUNTIME_ROOT"
 fi
 
 PIDS_DIR="$CACHE_ROOT/runtime/pids"
