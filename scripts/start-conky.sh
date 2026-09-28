@@ -74,20 +74,32 @@ pkill -f "$SUITE_DIR/widgets/" 2>/dev/null || true
 wait_pid_file_exit "$LAUNCHER_PID_FILE"
 wait_pid_file_exit "$CONKY_PID_FILE"
 
+is_companion() {
+  local manifest="$1/suite.toml"
+  [[ -f "$manifest" ]] || return 1
+  awk '
+    /^\[/ { in_launch = ($0 ~ /^\[launch\][[:space:]]*(#.*)?$/); next }
+    in_launch && /^[[:space:]]*companion[[:space:]]*=[[:space:]]*true[[:space:]]*(#.*)?$/ { found = 1 }
+    END { exit !found }
+  ' "$manifest"
+}
+
 # -- Enforce suite exclusivity ---------------------------------------------
-# Only one main suite may run at a time; SitRep is the sole exception (it's
-# allowed to run alongside any main suite), so it's skipped here. Match on
-# each other suite's widgets/ path — the same scoped convention used above
-# for this suite's own self-stop — rather than a blanket `pkill -x conky`,
-# so SitRep is never touched. Killing a suite's conky window is enough to
-# bring the whole suite down: a core-launcher-managed suite blocks on
-# `wait "$CONKY_PID"` and exits once it's gone, and its refresh loops
-# self-terminate on their next `kill -0 "$CONKY_PID"` check.
+# Only one main suite may run at a time. Companions — suites whose suite.toml
+# declares `[launch] companion = true`, e.g. SitRep and Doctor — may run
+# alongside any main suite, so they're skipped here; a sibling with no
+# manifest or no such key is stopped. Match on each other suite's widgets/
+# path — the same scoped convention used above for this suite's own
+# self-stop — rather than a blanket `pkill -x conky`, so companions are never
+# touched. Killing a suite's conky window is enough to bring the whole suite
+# down: a core-launcher-managed suite blocks on `wait "$CONKY_PID"` and exits
+# once it's gone, and its refresh loops self-terminate on their next
+# `kill -0 "$CONKY_PID"` check.
 CONKY_ROOT="$(dirname "$SUITE_DIR")"
 for other_dir in "$CONKY_ROOT"/*/; do
   other_dir="${other_dir%/}"
   [[ "$other_dir" == "$SUITE_DIR" ]] && continue
-  [[ "$(basename "$other_dir")" == "gtex62-sitrep" ]] && continue
+  is_companion "$other_dir" && continue
   [[ -d "$other_dir/widgets" ]] || continue
   pkill -f "$other_dir/widgets/" 2>/dev/null || true
 done
