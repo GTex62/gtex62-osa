@@ -129,10 +129,10 @@ choose_palette() {
 
   mapfile -t PALETTE_ROWS < <(
     awk '
-      /^  palettes = \{/ { inside = 1; next }
-      inside && /^  }/ { exit }
-      inside && match($0, /^    --[[:space:]]*(.*)$/, m) { print "@GROUP@" m[1]; next }
-      inside && match($0, /^    ([a-z0-9_]+) = \{/, m) { print m[1] }
+      /^  palettes = [{]/ { inside = 1; next }
+      inside && /^  [}]/ { exit }
+      inside && /^    --/ { g = $0; sub(/^    --[ \t]*/, "", g); print "@GROUP@" g; next }
+      inside && /^    [a-z0-9_]+ = [{]/ { print $1 }
     ' "$palette_file"
   )
 
