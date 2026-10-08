@@ -384,6 +384,119 @@ local function read_pollen()
   return { available = true, path = path, tree = 0, grass = 0, weed = 0, mold = 0 }
 end
 
+----------------------------------------------------------------
+-- AirGradient indoor view (core domain "airgradient")
+--
+-- The engine does all the work (readings, scaling, verdict, alert text); this
+-- only reads shared/airgradient/<profile>/status.json and draws what it says.
+-- Design: gtex62-core/docs/airgradient-provider-design.md (Display section).
+-- Every entry point is pcall-wrapped by the callers below: any failure here
+-- leaves the panel on its normal outdoor view.
+----------------------------------------------------------------
+local AG_STALE_SEC = 180          -- older than this: AG STALE, and the panel stays outdoor
+local AG_REFRESH_SEC = 15         -- how often status.json is re-read
+local AG_CYCLE_SEC = 30           -- outdoor + indoor phases always add up to this
+local AG_OUTDOOR_SEC = 15         -- outdoor share of the cycle
+local AG_OUTDOOR_ALERT_SEC = 10   -- outdoor share while an alert is visible (indoor gets the rest)
+local AG_ALERT_MAX_CHARS = 29
+
+local AG = { stamp = nil, read_at = nil, data = nil }
+
+local function ag_status_paths()
+  local profile = (suite_config().profiles or {}).airgradient
+  if not profile or profile == "" then return nil end
+  return shared_paths("airgradient", profile, "status.json")
+end
+
+local function read_ag()
+  local paths = ag_status_paths()
+  local path = paths and first_existing(paths)
+  if not path then return { available = false } end
+
+  local out = command_output(string.format([[
+jq -r '[
+  (.state // ""),
+  (if .generated_at then ((now - (.generated_at | fromdateiso8601)) | floor) else "" end),
+  (.label // ""),
+  (.co2_ppm // ""),
+  (.pm.pm25_ugm3 // ""),
+  (.pm.pm10_ugm3 // ""),
+  (.pm.pm1_ugm3 // ""),
+  (.pm.pm03_per_dl // ""),
+  (.voc_index // ""),
+  (.nox_index // ""),
+  ((.ventilation.alert_visible // false) | tostring),
+  (.ventilation.alert_text // "")
+] | @tsv' %q 2>/dev/null]], path))
+  if not out then return { available = false } end
+  local f = parse_tsv(out)
+  return {
+    available = true,
+    state = f[1] or "",
+    age0 = field_number(f, 2),      -- seconds since the last good reading, as of the read
+    label = f[3] or "",
+    co2 = field_number(f, 4),
+    pm25 = field_number(f, 5),
+    pm10 = field_number(f, 6),
+    pm1 = field_number(f, 7),
+    pm03 = field_number(f, 8),
+    voc = field_number(f, 9),
+    nox = field_number(f, 10),
+    alert_visible = f[11] == "true",
+    alert_text = f[12] or "",
+  }
+end
+
+local function ag_data()
+  local stamp = math.floor(os.time() / AG_REFRESH_SEC)
+  if AG.stamp ~= stamp then
+    AG.stamp = stamp
+    AG.read_at = os.time()
+    local ok, d = pcall(read_ag)
+    AG.data = ok and d or { available = false }
+  end
+  return AG.data
+end
+
+local function ag_age(d)
+  if not d.age0 then return nil end
+  return d.age0 + (os.time() - (AG.read_at or os.time()))
+end
+
+local function ag_running(d)
+  return d.available and (d.state == "ok" or d.state == "degraded")
+end
+
+local function ag_fresh(d)
+  local age = ag_age(d)
+  return ag_running(d) and age ~= nil and age <= AG_STALE_SEC
+end
+
+local function ag_alert_text(d)
+  if d.alert_visible and d.alert_text ~= "" then
+    return d.alert_text:sub(1, AG_ALERT_MAX_CHARS)
+  end
+  return nil
+end
+
+-- Indoor phase of the clock-driven rotation (no stored state: time modulo cycle).
+local function ag_indoor_phase()
+  local d = ag_data()
+  if not ag_fresh(d) then return false end
+  local outdoor_sec = ag_alert_text(d) and AG_OUTDOOR_ALERT_SEC or AG_OUTDOOR_SEC
+  return (os.time() % AG_CYCLE_SEC) >= outdoor_sec
+end
+
+-- Fixed-scale three-digit value; "---" when the reading is missing.
+local function ag_value(v, divisor)
+  local n = tonumber(v)
+  if not n then return "---" end
+  n = round_int(n / (divisor or 1))
+  if n < 0 then n = 0 end
+  if n > 999 then n = 999 end
+  return string.format("%03d", n)
+end
+
 local function refresh()
   local stamp = math.floor(os.time() / 60)
   if CACHE.stamp == stamp then return end
@@ -414,11 +527,25 @@ local function data_status()
     return "STALE", "AIR CACHE"
   end
 
+  -- Nothing wrong with the outdoor data: the slot can carry AirGradient's advice.
+  local ok, text = pcall(function()
+    local d = ag_data()
+    if not ag_running(d) then return nil end
+    if not ag_fresh(d) then return "AG STALE" end
+    return ag_alert_text(d)
+  end)
+  if ok and text then return text, nil end
+
   return "NOMINAL", nil
 end
 
 local function source_line()
   refresh()
+  local ok, indoor = pcall(ag_indoor_phase)
+  if ok and indoor then
+    local label = ag_data().label
+    return (label ~= "" and ("SRC // AG " .. label) or "SRC // AG")
+  end
   local air = CACHE.air or {}
   local parts = {}
 
@@ -502,7 +629,30 @@ function M.solar_rad_text()
   return string.format("%d", round_int((CACHE.solar or {}).rad_value or 0))
 end
 
+function M.pollution_title()
+  local ok, indoor = pcall(ag_indoor_phase)
+  if ok and indoor then
+    local label = ag_data().label
+    return (label ~= "" and ("INDOOR // " .. label) or "INDOOR")
+  end
+  return "POLLUTION"
+end
+
 function M.pollution_rows()
+  local ok, indoor = pcall(ag_indoor_phase)
+  if ok and indoor then
+    local d = ag_data()
+    -- Labels are capped at 22 characters by the table's label column.
+    return {
+      { label = "CO2 (PPM X10)", value = ag_value(d.co2, 10) },
+      { label = "PARTICULATE MATTER 2.5", value = ag_value(d.pm25) },
+      { label = "PARTICULATE MATTER 10", value = ag_value(d.pm10) },
+      { label = "PARTICULATE MATTER 1", value = ag_value(d.pm1) },
+      { label = "PARTICLES 0.3 (X10/DL)", value = ag_value(d.pm03, 10) },
+      { label = "VOC INDEX", value = ag_value(d.voc) },
+      { label = "NOX INDEX", value = ag_value(d.nox) },
+    }
+  end
   refresh()
   local c = (CACHE.air or {}).components or {}
   return {

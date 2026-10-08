@@ -101,3 +101,50 @@ Key sections for control:
 - atmos_array.meters.pair1 / pair2 (range knobs, labels, offsets).
 - atmos_array.meters.gas (per-gas range knobs, offsets, labels).
 - atmos_array.meters.source_markers (per-pollutant source markers).
+
+Indoor view (AirGradient)
+-------------------------
+
+Optional. When the suite binds the core `airgradient` domain, the POLLUTION table
+alternates with an INDOOR table fed by an AirGradient ONE. OSA only draws what the engine
+hands it: readings, scaling, the open/close-windows verdict and the alert text are all
+computed in gtex62-core (see gtex62-core/docs/airgradient-provider-design.md and
+ventilation-advisor-design.md). OSA reads
+
+    ~/.cache/gtex62-core/shared/airgradient/<profile>/status.json
+
+through `lua/suite/env.lua`; the profile is `airgradient = "<profile>"` under [profiles] in
+~/.config/gtex62-core/suites/osa.toml. Without that binding, or with the domain disabled, nothing
+changes: the panel never leaves the outdoor view.
+
+Rotation (clock-driven, no stored state; the cycle is always 30 s):
+
+- Normally 15 s outdoor, then 15 s indoor.
+- While an alert is visible: 10 s outdoor, 20 s indoor.
+- Outdoor view only if the reading is older than 3 minutes or the provider is disabled or in error.
+
+Indoor table (same seven rows, same (V) column; header `INDOOR // <LABEL> (V)`, or `INDOOR (V)` when
+the profile has no `label`; the SRC line reads `SRC // AG <LABEL>`):
+
+| Row | Label | Value |
+| --- | --- | --- |
+| 1 | CO2 (PPM X10) | ppm divided by 10 (482 ppm shows 048, 1,150 shows 115) |
+| 2 | PARTICULATE MATTER 2.5 | ug/m3 (humidity-compensated, as Home Assistant shows it) |
+| 3 | PARTICULATE MATTER 10 | ug/m3 |
+| 4 | PARTICULATE MATTER 1 | ug/m3 |
+| 5 | PARTICLES 0.3 (X10/DL) | particles/dL divided by 10 (3,389 shows 339) |
+| 6 | VOC INDEX | index |
+| 7 | NOX INDEX | index |
+
+Values are always three digits at a fixed scale (never switched by magnitude), capped at 999; a
+missing value shows `---`. Labels are limited to 22 characters by the label column. PM2.5 can read
+below PM1: only PM2.5 is humidity-compensated.
+
+DATA line: the engine's alert text (29 characters or fewer, e.g. `OPEN WIN // CO2 1150 PPM`)
+replaces `NOMINAL` in both views while an alert is visible; it never replaces an outdoor FAULT,
+PARTIAL or STALE state. `AG STALE` replaces `NOMINAL` when the AirGradient reading is more than
+3 minutes old. Alerts are hidden while the provider is in shadow mode (`[advisor] shadow = true` in
+its profile), which is how it ships.
+
+The timing constants (3 minutes, 15 s re-read, 15/10 s outdoor share, 30 s cycle) are at the top of the
+AirGradient section of `lua/suite/env.lua`.

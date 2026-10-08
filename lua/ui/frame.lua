@@ -3247,7 +3247,7 @@ local function draw_env_content(cr, theme, layout, panels, data)
     inner_y,
     center_w,
     table_cfg,
-    "POLLUTION",
+    type(env_data.pollution_title) == "function" and env_data.pollution_title() or "POLLUTION",
     type(env_data.pollution_rows) == "function" and env_data.pollution_rows() or {},
     pollution_rows
   )

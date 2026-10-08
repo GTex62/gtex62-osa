@@ -192,6 +192,17 @@ Smallest safe fix:
 | Display | Panel drawing file |
 | Scheduler | Startup loop/timer/cron/systemd if used |
 
+### ENV indoor view (AirGradient)
+
+- Panel never shows INDOOR: is `airgradient = "<profile>"` under `[profiles]` in `~/.config/gtex62-core/suites/osa.toml`?
+  Is `shared/airgradient/<profile>/status.json` there with `state` `ok` and `generated_at` under 3 minutes old?
+  (Older readings keep the panel on the outdoor view and put `AG STALE` on the DATA line.)
+- `AG STALE` on the DATA line: the provider loop is not running or the device is unreachable.
+  Check `osa-airgradient-refresh.pid`, `shared/airgradient/<profile>/fetch.log`, and `core.toml [providers] airgradient`.
+- No alert text during a real episode: the provider ships in shadow mode (`[advisor] shadow = true`);
+  the verdict is in `status.json` and `runtime/airgradient/<profile>/verdict_log.txt`.
+- Engine-side questions (readings, verdicts, alert wording) belong to gtex62-core, not this repo.
+
 ### First Mechanical Checks
 
 - Is the fetch script running?
