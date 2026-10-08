@@ -468,8 +468,9 @@ local function ag_age(d)
   return d.age0 + (os.time() - (AG.read_at or os.time()))
 end
 
+-- "partial" = readings are current but some fields are unavailable: still shown, with dashes.
 local function ag_running(d)
-  return d.available and (d.state == "ok" or d.state == "degraded")
+  return d.available and (d.state == "ok" or d.state == "partial" or d.state == "degraded")
 end
 
 local function ag_fresh(d)

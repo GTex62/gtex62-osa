@@ -195,7 +195,7 @@ Smallest safe fix:
 ### ENV indoor view (AirGradient)
 
 - Panel never shows INDOOR: is `airgradient = "<profile>"` under `[profiles]` in `~/.config/gtex62-core/suites/osa.toml`?
-  Is `shared/airgradient/<profile>/status.json` there with `state` `ok` and `generated_at` under 3 minutes old?
+  Is `shared/airgradient/<profile>/status.json` there with `state` `ok` (or `partial`) and `generated_at` under 3 minutes old?
   (Older readings keep the panel on the outdoor view and put `AG STALE` on the DATA line.)
 - `AG STALE` on the DATA line: the provider loop is not running or the device is unreachable.
   Check `osa-airgradient-refresh.pid`, `shared/airgradient/<profile>/fetch.log`, and `core.toml [providers] airgradient`.
