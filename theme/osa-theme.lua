@@ -840,9 +840,9 @@ theme.env = {
 
   -- Optional AirGradient indoor view: how OSA shows it (the data, scaling and alert text come from
   -- gtex62-core; see docs/atmos_meters.md). Only matters if suites/osa.toml binds the airgradient domain.
-  -- Defaults reproduce the shipped behavior; invalid values are clamped, never an error.
+  -- Off by default (most installs have no AirGradient); the other keys show their defaults. Invalid values are clamped, never an error.
   airgradient = {
-    enabled = true,           -- false: outdoor view only, no AirGradient alerts, no AG STALE
+    enabled = false,          -- set true if you have an AirGradient (and bind it in suites/osa.toml); false: outdoor view only
     label = nil,              -- name after the table title, e.g. "CAVE" (8 characters max, upper-cased);
                               -- nil = use the label in the provider profile, "" = no name
     title = "INDOOR",         -- table title, 8 characters max: "INDOOR // CAVE"

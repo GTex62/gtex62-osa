@@ -148,12 +148,14 @@ PARTIAL or STALE state. `AG STALE` replaces `NOMINAL` when the AirGradient readi
 3 minutes old. Alerts are hidden while the provider is in shadow mode (`[advisor] shadow = true` in
 its profile), which is how it ships.
 
-Theme knobs (`theme.env.airgradient` in theme/osa-theme.lua; omit the block, or any key, for the defaults).
+Theme knobs (`theme.env.airgradient` in theme/osa-theme.lua; omit any key for its default, shown below). The shipped theme
+sets `enabled = false`, so set it to `true` as well as binding the domain in osa.toml. (With the whole block omitted
+the code treats `enabled` as true.)
 Values are validated and clamped, so a typo cannot break the panel. Restart conky after editing.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| enabled | true | false: outdoor view only, no AirGradient alerts, no AG STALE |
+| enabled | true (shipped theme: false) | false: outdoor view only, no AirGradient alerts, no AG STALE |
 | label | nil | name after the table title, e.g. `"CAVE"` (8 characters max, upper-cased); nil uses the provider profile's `label`, `""` shows no name |
 | title | "INDOOR" | table title, 8 characters max (`INDOOR // CAVE`) |
 | source_tag | "AG" | tag on the SRC line, 6 characters max (`SRC // AG CAVE`) |
