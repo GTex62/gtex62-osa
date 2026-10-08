@@ -487,16 +487,17 @@ local function ag_indoor_phase()
   return (os.time() % AG_CYCLE_SEC) >= outdoor_sec
 end
 
--- Zero-padded fixed-width value (3 digits, or 4 for CO2 and PM0.3, which routinely pass 999);
--- "---" when the reading is missing. Never rescaled by magnitude; capped at the width.
-local function ag_value(v, digits)
+-- Fixed-width integer value: zero-padded to `digits` like the other ENV rows, or plain when `pad` is
+-- false (CO2 and PM0.3, which routinely pass 999, show up to four digits unpadded). "---" when the
+-- reading is missing. Never rescaled by magnitude; capped at the width.
+local function ag_value(v, digits, pad)
   local n = tonumber(v)
   if not n then return "---" end
   n = round_int(n)
   if n < 0 then n = 0 end
   local cap = 10 ^ digits - 1
   if n > cap then n = cap end
-  return string.format("%0" .. digits .. "d", n)
+  return string.format(pad == false and "%d" or ("%0" .. digits .. "d"), n)
 end
 
 local function refresh()
@@ -647,11 +648,11 @@ function M.pollution_rows()
     -- Labels are capped at 22 characters by the table's label column, and at 20 on the two
     -- four-digit rows (their value text starts 2 px from the end of the column).
     return {
-      { label = "CARBON DIOXIDE (PPM)", value = ag_value(d.co2, 4) },
+      { label = "CARBON DIOXIDE (PPM)", value = ag_value(d.co2, 4, false) },
       { label = "PARTICULATE MATTER 2.5", value = ag_value(d.pm25, 3) },
       { label = "PARTICULATE MATTER 10", value = ag_value(d.pm10, 3) },
       { label = "PARTICULATE MATTER 1", value = ag_value(d.pm1, 3) },
-      { label = "PARTICLES 0.3 (/DL)", value = ag_value(d.pm03, 4) },
+      { label = "PARTICLES 0.3 (/DL)", value = ag_value(d.pm03, 4, false) },
       { label = "VOC INDEX", value = ag_value(d.voc, 3) },
       { label = "NOX INDEX", value = ag_value(d.nox, 3) },
     }
