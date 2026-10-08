@@ -265,10 +265,15 @@ jq -r '[
   local raw_obs_path = sibling_raw_path(path, "raw_airnow_observation.json")
   local raw_data_path = sibling_raw_path(path, "raw_airnow_data.json")
   local raw_airnow_aqi = raw_obs_path and json_number(raw_obs_path, "[.[].AQI? // empty] | max // empty") or nil
+  -- Fallback only, for when the provider's overlay (airnow.values) is empty: the newest PM2.5 row
+  -- in the raw AirNow file. Same rules as the provider: a negative raw concentration (AirNow's -999
+  -- "not yet available") falls back to Value, and nothing older than 2 hours is used.
   local raw_airnow_pm25 = raw_data_path and json_number(
     raw_data_path,
-    [[def epoch: if . == null then null elif type == "number" then . else (tostring | strptime("%Y-%m-%dT%H:%M")? | mktime) end; [.[]? | select((.Parameter // "" | ascii_upcase) == "PM2.5" or (.Parameter // "" | ascii_upcase) == "PM25") | {value:(.RawConcentration // .Value), ts:(.UTC | epoch)} | select(.value != null and (.value | tonumber) >= 0 and .ts != null)] | sort_by(.ts) | last.value // empty]]
+    [[def epoch: if . == null then null elif type == "number" then . else (tostring | strptime("%Y-%m-%dT%H:%M")? | mktime) end; [.[]? | select((.Parameter // "" | ascii_upcase) == "PM2.5" or (.Parameter // "" | ascii_upcase) == "PM25") | {value:(((.RawConcentration | try tonumber catch null) | select(. != null and . >= 0)) // .Value), ts:(.UTC | epoch)} | select(.value != null and (.value | tonumber) >= 0 and .ts != null and (now - .ts) >= 0 and (now - .ts) <= 7200)] | sort_by(.ts) | last.value // empty]]
   ) or nil
+  -- The provider's value (nearest AirNow monitor, age-limited) wins; the raw read is only a fallback.
+  local airnow_pm25 = json_number(path, ".airnow.values.pm2_5 // empty") or raw_airnow_pm25
 
   return {
     available = true,
@@ -279,7 +284,7 @@ jq -r '[
     airnow_ts = json_timestamp(path, ".airnow.aqi_ts // .airnow.latest_ts // .airnow.observed_ts // empty"),
     airnow_aqi = field_number(fields, 1) or raw_airnow_aqi,
     airnow_values = {
-      pm2_5 = json_number(path, ".airnow.values.pm2_5 // empty") or raw_airnow_pm25,
+      pm2_5 = airnow_pm25,
       o3 = json_number(path, ".airnow.values.o3 // empty"),
       pm10 = json_number(path, ".airnow.values.pm10 // empty"),
       no2 = json_number(path, ".airnow.values.no2 // empty"),
@@ -290,7 +295,7 @@ jq -r '[
     owm_aqi = owm_aqi,
     owm_aqi_mapped = owm_aqi_to_airnow(owm_aqi),
     components = {
-      pm2_5 = raw_airnow_pm25 or field_number(fields, 3),
+      pm2_5 = airnow_pm25 or field_number(fields, 3),
       o3 = field_number(fields, 4),
       pm10 = field_number(fields, 5),
       no2 = field_number(fields, 6),
