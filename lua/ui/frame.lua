@@ -3153,6 +3153,11 @@ local function draw_env_content(cr, theme, layout, panels, data)
   local env_data = data and data.env
   if not (env_panel and env_data and type(env_data.status_lines) == "function") then return end
 
+  -- AirGradient knobs (theme.env.airgradient) go to the data module before it is asked for anything.
+  if type(env_data.configure) == "function" then
+    env_data.configure(((theme or {}).env or {}).airgradient)
+  end
+
   local status_cfg = (((theme or {}).env or {}).status or {})
   local x = layout.frame.x + env_panel.x + (tonumber(status_cfg.x) or 46)
   local y = layout.frame.y + env_panel.y + (tonumber(status_cfg.y) or 36)

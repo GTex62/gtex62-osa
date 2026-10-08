@@ -837,6 +837,24 @@ theme.env = {
     pollen_label_w = 56,
     pollen_bar_h = 6,
   },
+
+  -- Optional AirGradient indoor view: how OSA shows it (the data, scaling and alert text come from
+  -- gtex62-core; see docs/atmos_meters.md). Only matters if suites/osa.toml binds the airgradient domain.
+  -- Defaults reproduce the shipped behavior; invalid values are clamped, never an error.
+  airgradient = {
+    enabled = true,           -- false: outdoor view only, no AirGradient alerts, no AG STALE
+    label = nil,              -- name after the table title, e.g. "CAVE" (8 characters max, upper-cased);
+                              -- nil = use the label in the provider profile, "" = no name
+    title = "INDOOR",         -- table title, 8 characters max: "INDOOR // CAVE"
+    source_tag = "AG",        -- SRC line tag, 6 characters max: "SRC // AG CAVE"
+    cycle_sec = 30,           -- one outdoor + indoor rotation; both phases always add up to this
+    outdoor_sec = 15,         -- outdoor share of the cycle (the rest is indoor)
+    alert_outdoor_sec = 10,   -- outdoor share while an alert is showing (indoor gets the rest)
+    stale_sec = 180,          -- reading older than this: outdoor view, and AG STALE if show_stale
+    refresh_sec = 15,         -- how often the provider's status.json is re-read
+    show_alerts = true,       -- the engine's advice on the DATA line (hidden anyway while the provider is in shadow mode)
+    show_stale = true,        -- AG STALE on the DATA line when the reading is stale
+  },
 }
 
 function theme.session_text_scale()

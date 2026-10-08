@@ -398,12 +398,47 @@ end
 -- Every entry point is pcall-wrapped by the callers below: any failure here
 -- leaves the panel on its normal outdoor view.
 ----------------------------------------------------------------
-local AG_STALE_SEC = 180          -- older than this: AG STALE, and the panel stays outdoor
-local AG_REFRESH_SEC = 15         -- how often status.json is re-read
-local AG_CYCLE_SEC = 30           -- outdoor + indoor phases always add up to this
-local AG_OUTDOOR_SEC = 15         -- outdoor share of the cycle
-local AG_OUTDOOR_ALERT_SEC = 10   -- outdoor share while an alert is visible (indoor gets the rest)
 local AG_ALERT_MAX_CHARS = 29
+
+-- Knobs: theme.env.airgradient in theme/osa-theme.lua. frame.lua pushes them in through M.configure() on every
+-- draw; until then (and for anything missing or invalid) these defaults apply. Bad values are clamped, never an
+-- error: a typo in the theme must not blank the panel.
+local function ag_text(v, max_len)
+  return (tostring(v):gsub("^%s+", ""):gsub("%s+$", ""):upper():sub(1, max_len))
+end
+
+local function ag_num(v, lo, hi, default)
+  v = tonumber(v)
+  if not v then return default end
+  if v < lo then return lo end
+  if v > hi then return hi end
+  return v
+end
+
+local function ag_settings(t)
+  t = type(t) == "table" and t or {}
+  local c = {
+    enabled = t.enabled ~= false,           -- false: no indoor view, no AirGradient alerts, no AG STALE
+    show_alerts = t.show_alerts ~= false,   -- the engine's advice on the DATA line
+    show_stale = t.show_stale ~= false,     -- AG STALE on the DATA line
+    label = (t.label ~= nil) and ag_text(t.label, 8) or nil,   -- nil: use the provider profile's label
+  }
+  c.title = ag_text(t.title ~= nil and t.title or "INDOOR", 8)
+  if c.title == "" then c.title = "INDOOR" end
+  c.source_tag = ag_text(t.source_tag ~= nil and t.source_tag or "AG", 6)
+  c.cycle_sec = math.floor(ag_num(t.cycle_sec, 2, 3600, 30))
+  c.outdoor_sec = math.floor(ag_num(t.outdoor_sec, 0, c.cycle_sec, math.min(15, c.cycle_sec)))
+  c.alert_outdoor_sec = math.floor(ag_num(t.alert_outdoor_sec, 0, c.cycle_sec, math.min(10, c.cycle_sec)))
+  c.stale_sec = ag_num(t.stale_sec, 10, 86400, 180)
+  c.refresh_sec = math.floor(ag_num(t.refresh_sec, 1, 600, 15))
+  return c
+end
+
+local AGCFG = ag_settings(nil)
+
+function M.configure(t)
+  AGCFG = ag_settings(t)
+end
 
 local AG = { stamp = nil, read_at = nil, data = nil }
 
@@ -453,7 +488,8 @@ jq -r '[
 end
 
 local function ag_data()
-  local stamp = math.floor(os.time() / AG_REFRESH_SEC)
+  if not AGCFG.enabled then return { available = false } end
+  local stamp = math.floor(os.time() / AGCFG.refresh_sec)
   if AG.stamp ~= stamp then
     AG.stamp = stamp
     AG.read_at = os.time()
@@ -475,11 +511,11 @@ end
 
 local function ag_fresh(d)
   local age = ag_age(d)
-  return ag_running(d) and age ~= nil and age <= AG_STALE_SEC
+  return ag_running(d) and age ~= nil and age <= AGCFG.stale_sec
 end
 
 local function ag_alert_text(d)
-  if d.alert_visible and d.alert_text ~= "" then
+  if AGCFG.show_alerts and d.alert_visible and d.alert_text ~= "" then
     return d.alert_text:sub(1, AG_ALERT_MAX_CHARS)
   end
   return nil
@@ -489,8 +525,14 @@ end
 local function ag_indoor_phase()
   local d = ag_data()
   if not ag_fresh(d) then return false end
-  local outdoor_sec = ag_alert_text(d) and AG_OUTDOOR_ALERT_SEC or AG_OUTDOOR_SEC
-  return (os.time() % AG_CYCLE_SEC) >= outdoor_sec
+  local outdoor_sec = ag_alert_text(d) and AGCFG.alert_outdoor_sec or AGCFG.outdoor_sec
+  return (os.time() % AGCFG.cycle_sec) >= outdoor_sec
+end
+
+-- Name shown after the table title and on the SRC line: the theme's override if set, else the provider's.
+local function ag_label(d)
+  if AGCFG.label ~= nil then return AGCFG.label end
+  return ag_text(d.label or "", 8)
 end
 
 -- Fixed-width integer value: zero-padded to `digits` like the other ENV rows, or plain when `pad` is
@@ -540,7 +582,7 @@ local function data_status()
   local ok, text = pcall(function()
     local d = ag_data()
     if not ag_running(d) then return nil end
-    if not ag_fresh(d) then return "AG STALE" end
+    if not ag_fresh(d) then return AGCFG.show_stale and "AG STALE" or nil end
     return ag_alert_text(d)
   end)
   if ok and text then return text, nil end
@@ -552,8 +594,9 @@ local function source_line()
   refresh()
   local ok, indoor = pcall(ag_indoor_phase)
   if ok and indoor then
-    local label = ag_data().label
-    return (label ~= "" and ("SRC // AG " .. label) or "SRC // AG")
+    local label = ag_label(ag_data())
+    local tag = "SRC // " .. AGCFG.source_tag
+    return (label ~= "" and (tag .. " " .. label) or tag)
   end
   local air = CACHE.air or {}
   local parts = {}
@@ -641,8 +684,8 @@ end
 function M.pollution_title()
   local ok, indoor = pcall(ag_indoor_phase)
   if ok and indoor then
-    local label = ag_data().label
-    return (label ~= "" and ("INDOOR // " .. label) or "INDOOR")
+    local label = ag_label(ag_data())
+    return (label ~= "" and (AGCFG.title .. " // " .. label) or AGCFG.title)
   end
   return "POLLUTION"
 end

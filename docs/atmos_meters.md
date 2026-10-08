@@ -117,9 +117,9 @@ through `lua/suite/env.lua`; the profile is `airgradient = "<profile>"` under [p
 ~/.config/gtex62-core/suites/osa.toml. Without that binding, or with the domain disabled, nothing
 changes: the panel never leaves the outdoor view.
 
-Rotation (clock-driven, no stored state; the cycle is always 30 s):
+Rotation (clock-driven, no stored state; defaults shown, all adjustable in the knobs below):
 
-- Normally 15 s outdoor, then 15 s indoor.
+- Normally 15 s outdoor, then 15 s indoor, in a 30 s cycle.
 - While an alert is visible: 10 s outdoor, 20 s indoor.
 - Outdoor view only if the reading is older than 3 minutes or the provider is disabled or in error.
 
@@ -148,5 +148,21 @@ PARTIAL or STALE state. `AG STALE` replaces `NOMINAL` when the AirGradient readi
 3 minutes old. Alerts are hidden while the provider is in shadow mode (`[advisor] shadow = true` in
 its profile), which is how it ships.
 
-The timing constants (3 minutes, 15 s re-read, 15/10 s outdoor share, 30 s cycle) are at the top of the
-AirGradient section of `lua/suite/env.lua`.
+Theme knobs (`theme.env.airgradient` in theme/osa-theme.lua; omit the block, or any key, for the defaults).
+Values are validated and clamped, so a typo cannot break the panel. Restart conky after editing.
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| enabled | true | false: outdoor view only, no AirGradient alerts, no AG STALE |
+| label | nil | name after the table title, e.g. `"CAVE"` (8 characters max, upper-cased); nil uses the provider profile's `label`, `""` shows no name |
+| title | "INDOOR" | table title, 8 characters max (`INDOOR // CAVE`) |
+| source_tag | "AG" | tag on the SRC line, 6 characters max (`SRC // AG CAVE`) |
+| cycle_sec | 30 | one outdoor + indoor rotation (2 to 3600) |
+| outdoor_sec | 15 | outdoor share of the cycle (0 = indoor all the time) |
+| alert_outdoor_sec | 10 | outdoor share while an alert is showing |
+| stale_sec | 180 | a reading older than this gives the outdoor view (and AG STALE) |
+| refresh_sec | 15 | how often status.json is re-read |
+| show_alerts | true | engine advice on the DATA line |
+| show_stale | true | AG STALE on the DATA line |
+
+Tests: `tests/env_airgradient/run-tests.sh` (needs lua5.4 and jq; uses a scratch cache and a fake clock).
