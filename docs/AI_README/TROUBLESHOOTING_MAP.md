@@ -200,7 +200,8 @@ Smallest safe fix:
 - `AG STALE` on the DATA line: the provider loop is not running or the device is unreachable.
   Check `osa-airgradient-refresh.pid`, `shared/airgradient/<profile>/fetch.log`, and `core.toml [providers] airgradient`.
 - No alert text during a real episode: the provider ships in shadow mode (`[advisor] shadow = true`);
-  the verdict is in `status.json` and `runtime/airgradient/<profile>/verdict_log.txt`.
+  the verdict is in `status.json` and in `verdict_log.txt` in the provider's `log_dir`
+  (default `~/.local/share/gtex62-core/airgradient/<profile>/logs/`; see the profile's `[advisor] log_dir`).
 - Engine-side questions (readings, verdicts, alert wording) belong to gtex62-core, not this repo.
 
 ### First Mechanical Checks
