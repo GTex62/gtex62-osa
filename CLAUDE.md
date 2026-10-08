@@ -14,7 +14,9 @@ Commit and push each repo independently.
   changed locally after every push. Never commit a monitor_head-only change.
 - Do not refactor while fixing a bug. Smallest safe change only.
 - Do not rename files, dirs, or public paths unless explicitly requested.
-- Commit messages: no Co-Authored-By or AI attribution lines.
+- Commit messages: follow whatever AI attribution the current session's own
+  instructions specify — that's changed over time (was "none", is now a
+  Co-Authored-By line), so don't hardcode a specific rule here.
 
 ## Bootstrap Gap
 
