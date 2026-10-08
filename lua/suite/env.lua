@@ -487,14 +487,16 @@ local function ag_indoor_phase()
   return (os.time() % AG_CYCLE_SEC) >= outdoor_sec
 end
 
--- Fixed-scale three-digit value; "---" when the reading is missing.
-local function ag_value(v, divisor)
+-- Zero-padded fixed-width value (3 digits, or 4 for CO2 and PM0.3, which routinely pass 999);
+-- "---" when the reading is missing. Never rescaled by magnitude; capped at the width.
+local function ag_value(v, digits)
   local n = tonumber(v)
   if not n then return "---" end
-  n = round_int(n / (divisor or 1))
+  n = round_int(n)
   if n < 0 then n = 0 end
-  if n > 999 then n = 999 end
-  return string.format("%03d", n)
+  local cap = 10 ^ digits - 1
+  if n > cap then n = cap end
+  return string.format("%0" .. digits .. "d", n)
 end
 
 local function refresh()
@@ -642,15 +644,16 @@ function M.pollution_rows()
   local ok, indoor = pcall(ag_indoor_phase)
   if ok and indoor then
     local d = ag_data()
-    -- Labels are capped at 22 characters by the table's label column.
+    -- Labels are capped at 22 characters by the table's label column, and at 20 on the two
+    -- four-digit rows (their value text starts 2 px from the end of the column).
     return {
-      { label = "CO2 (PPM X10)", value = ag_value(d.co2, 10) },
-      { label = "PARTICULATE MATTER 2.5", value = ag_value(d.pm25) },
-      { label = "PARTICULATE MATTER 10", value = ag_value(d.pm10) },
-      { label = "PARTICULATE MATTER 1", value = ag_value(d.pm1) },
-      { label = "PARTICLES 0.3 (X10/DL)", value = ag_value(d.pm03, 10) },
-      { label = "VOC INDEX", value = ag_value(d.voc) },
-      { label = "NOX INDEX", value = ag_value(d.nox) },
+      { label = "CARBON DIOXIDE (PPM)", value = ag_value(d.co2, 4) },
+      { label = "PARTICULATE MATTER 2.5", value = ag_value(d.pm25, 3) },
+      { label = "PARTICULATE MATTER 10", value = ag_value(d.pm10, 3) },
+      { label = "PARTICULATE MATTER 1", value = ag_value(d.pm1, 3) },
+      { label = "PARTICLES 0.3 (/DL)", value = ag_value(d.pm03, 4) },
+      { label = "VOC INDEX", value = ag_value(d.voc, 3) },
+      { label = "NOX INDEX", value = ag_value(d.nox, 3) },
     }
   end
   refresh()

@@ -128,17 +128,19 @@ the profile has no `label`; the SRC line reads `SRC // AG <LABEL>`):
 
 | Row | Label | Value |
 | --- | --- | --- |
-| 1 | CO2 (PPM X10) | ppm divided by 10 (482 ppm shows 048, 1,150 shows 115) |
+| 1 | CARBON DIOXIDE (PPM) | ppm, four digits (482 ppm shows 0482, 1,150 shows 1150) |
 | 2 | PARTICULATE MATTER 2.5 | ug/m3 (humidity-compensated, as Home Assistant shows it) |
 | 3 | PARTICULATE MATTER 10 | ug/m3 |
 | 4 | PARTICULATE MATTER 1 | ug/m3 |
-| 5 | PARTICLES 0.3 (X10/DL) | particles/dL divided by 10 (3,389 shows 339) |
+| 5 | PARTICLES 0.3 (/DL) | particles/dL, four digits (3,389 shows 3389) |
 | 6 | VOC INDEX | index |
 | 7 | NOX INDEX | index |
 
-Values are always three digits at a fixed scale (never switched by magnitude), capped at 999; a
-missing value shows `---`. Labels are limited to 22 characters by the label column. PM2.5 can read
-below PM1: only PM2.5 is humidity-compensated.
+Values are zero-padded at a fixed width and never rescaled by magnitude: four digits for CO2 and
+PM0.3 (capped at 9999), three for everything else (capped at 999). A missing value shows `---`. The
+four-digit values fill the whole value cell, so their labels are limited to 20 characters (22 on the
+three-digit rows, which is what the label column holds). PM2.5 can read below PM1: only PM2.5 is
+humidity-compensated.
 
 DATA line: the engine's alert text (29 characters or fewer, e.g. `OPEN WIN // CO2 1150 PPM`)
 replaces `NOMINAL` in both views while an alert is visible; it never replaces an outdoor FAULT,
