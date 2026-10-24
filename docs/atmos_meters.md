@@ -144,6 +144,9 @@ indexes and the pollen indexes are always whole numbers (a pollen index of 0 sho
 `theme.env.atmos`, taken out of the SOLAR gauge (`solar_meter_w` 122, `solar_value_spread` 40, `meter_value_font_pt` 18, so a
 four-character UV or RAD such as `10.8` or `1043` still sits clear of its bar); `table_value_align` is `"right"` (set it to
 `"center"` for the old centered look).
+A theme file from before 0.5.1 (`table_value_w` 36, no `table_value_align`) still draws cleanly: the column widens to the widest value
+shown and the values right-align by default, but the SOLAR numbers keep the old 20 pt size, so copy the five values above into your
+`osa-theme.lua` to get the intended layout.
 
 DATA line: the engine's alert text (29 characters or fewer, e.g. `OPEN WIN // CO2 1150 PPM`)
 replaces `NOMINAL` in both views while an alert is visible; it never replaces an outdoor FAULT,

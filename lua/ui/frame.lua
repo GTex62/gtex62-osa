@@ -961,20 +961,33 @@ end
 local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_limit, bar_max)
   local header_h = tonumber(cfg.header_h) or 16
   local header_gap = tonumber(cfg.header_gap) or 2
-  local value_w = tonumber(cfg.table_value_w) or 36
+  local value_w = tonumber(cfg.table_value_w) or 50
   local bar_h = bar_max and (tonumber(cfg.pollen_bar_h) or 6) or 0
   local fixed_label_w = bar_max and tonumber(cfg.pollen_label_w)
-  local label_w = fixed_label_w or (w - value_w - header_gap)
-  local bar_w = bar_max and (w - label_w - (header_gap * 2) - value_w) or 0
-  local bar_col_w = bar_w > 0 and (bar_w + header_gap) or 0
   local header_font_pt = tonumber(cfg.header_font_pt) or theme.text.body_xs_pt
   local row_font_pt = tonumber(cfg.row_font_pt) or theme.text.micro_pt
   local row_h = tonumber(cfg.row_h) or 16
+  -- A theme written for the old, narrower value column must still draw cleanly: widen the column to the
+  -- widest value actually shown (plus a small margin) when the configured width is not enough.
+  do
+    cairo_select_font_face(cr, theme.fonts.data, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL)
+    cairo_set_font_size(cr, row_font_pt)
+    local ext = cairo_text_extents_t:create()
+    local widest = 0
+    for i = 1, math.min(#(rows or {}), tonumber(row_limit) or #(rows or {})) do
+      cairo_text_extents(cr, string.upper(tostring(rows[i].value or "")), ext)
+      widest = math.max(widest, ext.x_advance)
+    end
+    value_w = math.max(value_w, math.ceil(widest) + 6)
+  end
+  local label_w = fixed_label_w or (w - value_w - header_gap)
+  local bar_w = bar_max and (w - label_w - (header_gap * 2) - value_w) or 0
+  local bar_col_w = bar_w > 0 and (bar_w + header_gap) or 0
   local row_y = y + header_h + 12
   local bar_x = x + label_w + header_gap
   local value_cx = bar_x + bar_col_w + (value_w / 2)
   local value_right = bar_x + bar_col_w + value_w
-  local value_align_right = tostring(cfg.table_value_align or "center") == "right"
+  local value_align_right = tostring(cfg.table_value_align or "right") == "right"
 
   local title_span = bar_w > 0 and (label_w + header_gap + bar_w) or label_w
   draw_split_table_header(cr, x, y, title_span, header_gap, value_w, header_h, title, "(V)", header_font_pt, theme)
