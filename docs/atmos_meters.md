@@ -128,19 +128,22 @@ the profile has no `label`; the SRC line reads `SRC // AG <LABEL>`):
 
 | Row | Label | Value |
 | --- | --- | --- |
-| 1 | CARBON DIOXIDE (PPM) | ppm, up to four digits, no leading zeros (482 ppm shows 482, 1,150 shows 1150) |
+| 1 | CARBON DIOXIDE (PPM) | ppm, a whole number (482 shows 482, 1,150 shows 1,150) |
 | 2 | PARTICULATE MATTER 2.5 | ug/m3 (humidity-compensated, as Home Assistant shows it) |
 | 3 | PARTICULATE MATTER 10 | ug/m3 |
 | 4 | PARTICULATE MATTER 1 | ug/m3 |
-| 5 | PARTICLES 0.3 (/DL) | particles/dL, up to four digits, no leading zeros (3,389 shows 3389) |
+| 5 | PARTICLES 0.3 (/DL) | particles/dL, a whole number (3,389 shows 3,389) |
 | 6 | VOC INDEX | index |
 | 7 | NOX INDEX | index |
 
-Values are never rescaled by magnitude: CO2 and PM0.3 show up to four digits with no leading zeros
-(capped at 9999); every other row is zero-padded to three digits (capped at 999). A missing value shows `---`. The
-four-digit values fill the whole value cell, so their labels are limited to 20 characters (22 on the
-three-digit rows, which is what the label column holds). PM2.5 can read below PM1: only PM2.5 is
-humidity-compensated.
+The (V) column is right-aligned and shows each value as its source reports it, in at most five characters, for
+the outdoor POLLUTION and POLLEN rows as well: two decimals under 100 (`5.27`, `12.34`), one decimal under 1,000
+(`121.3`), a whole number with a thousands separator above (`1,107`), capped at `9,999`. CO2, PM0.3, the VOC and NOx
+indexes and the pollen indexes are always whole numbers (a pollen index of 0 shows `0`, not `000`). A missing value shows
+`---`. PM2.5 can read below PM1: only PM2.5 is humidity-compensated. The width comes from `table_value_w` (50) in
+`theme.env.atmos`, taken out of the SOLAR gauge (`solar_meter_w` 122, `solar_value_spread` 40, `meter_value_font_pt` 18, so a
+four-character UV or RAD such as `10.8` or `1043` still sits clear of its bar); `table_value_align` is `"right"` (set it to
+`"center"` for the old centered look).
 
 DATA line: the engine's alert text (29 characters or fewer, e.g. `OPEN WIN // CO2 1150 PPM`)
 replaces `NOMINAL` in both views while an alert is visible; it never replaces an outdoor FAULT,

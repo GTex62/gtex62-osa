@@ -810,9 +810,10 @@ theme.env = {
     row_font_pt = 15,
     row_h = 16,
     table_gap = 0,
-    table_value_w = 36,
+    table_value_w = 50,
+    table_value_align = "right", -- "right" lines the unpadded values up on the right; "center" is the old look
     meter_w = 68,
-    solar_meter_w = 136,
+    solar_meter_w = 122,
     meter_gap = 8,
     footer_h = 16,
     footer_gap = 2,
@@ -822,7 +823,7 @@ theme.env = {
     aqi_value_spread = 22,
 
     owm_aqi_bar_max = 5,
-    meter_value_font_pt = 20,
+    meter_value_font_pt = 18,
     solar_value_spread = 40,
 
     meter_bar_w = 8,

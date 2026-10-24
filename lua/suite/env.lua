@@ -535,17 +535,28 @@ local function ag_label(d)
   return ag_text(d.label or "", 8)
 end
 
--- Fixed-width integer value: zero-padded to `digits` like the other ENV rows, or plain when `pad` is
--- false (CO2 and PM0.3, which routinely pass 999, show up to four digits unpadded). "---" when the
--- reading is missing. Never rescaled by magnitude; capped at the width.
-local function ag_value(v, digits, pad)
+-- Integer with thousands separators: 1107 -> "1,107".
+local function with_commas(n)
+  local s = string.format("%d", n)
+  local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+  return (out:gsub("^,", ""))
+end
+
+-- A value as the source reports it, for the right-aligned (V) column, at most five characters:
+-- two decimals under 100 (5.27, 12.34), one decimal under 1,000 (121.3), a whole number with a
+-- thousands separator above (1,107), capped at 9,999. `whole` forces a whole number (ppm, counts,
+-- indexes). "---" when the reading is missing.
+local function real_value(v, whole)
   local n = tonumber(v)
   if not n then return "---" end
-  n = round_int(n)
   if n < 0 then n = 0 end
-  local cap = 10 ^ digits - 1
-  if n > cap then n = cap end
-  return string.format(pad == false and "%d" or ("%0" .. digits .. "d"), n)
+  if not whole then
+    if math.floor(n * 100 + 0.5) / 100 < 100 then return string.format("%.2f", n) end
+    if math.floor(n * 10 + 0.5) / 10 < 1000 then return string.format("%.1f", n) end
+  end
+  n = round_int(n)
+  if n > 9999 then n = 9999 end
+  return with_commas(n)
 end
 
 local function refresh()
@@ -694,28 +705,27 @@ function M.pollution_rows()
   local ok, indoor = pcall(ag_indoor_phase)
   if ok and indoor then
     local d = ag_data()
-    -- Labels are capped at 22 characters by the table's label column, and at 20 on the two
-    -- four-digit rows (their value text starts 2 px from the end of the column).
+    -- Labels are capped at 22 characters by the table's label column.
     return {
-      { label = "CARBON DIOXIDE (PPM)", value = ag_value(d.co2, 4, false) },
-      { label = "PARTICULATE MATTER 2.5", value = ag_value(d.pm25, 3) },
-      { label = "PARTICULATE MATTER 10", value = ag_value(d.pm10, 3) },
-      { label = "PARTICULATE MATTER 1", value = ag_value(d.pm1, 3) },
-      { label = "PARTICLES 0.3 (/DL)", value = ag_value(d.pm03, 4, false) },
-      { label = "VOC INDEX", value = ag_value(d.voc, 3) },
-      { label = "NOX INDEX", value = ag_value(d.nox, 3) },
+      { label = "CARBON DIOXIDE (PPM)", value = real_value(d.co2, true) },
+      { label = "PARTICULATE MATTER 2.5", value = real_value(d.pm25) },
+      { label = "PARTICULATE MATTER 10", value = real_value(d.pm10) },
+      { label = "PARTICULATE MATTER 1", value = real_value(d.pm1) },
+      { label = "PARTICLES 0.3 (/DL)", value = real_value(d.pm03, true) },
+      { label = "VOC INDEX", value = real_value(d.voc, true) },
+      { label = "NOX INDEX", value = real_value(d.nox, true) },
     }
   end
   refresh()
   local c = (CACHE.air or {}).components or {}
   return {
-    { label = "PARTICULATE MATTER 2.5", value = string.format("%03d", round_int(c.pm2_5)) },
-    { label = "OZONE", value = string.format("%03d", round_int(c.o3)) },
-    { label = "PARTICULATE MATTER 10", value = string.format("%03d", round_int(c.pm10)) },
-    { label = "NITROGEN DIOXIDE", value = string.format("%03d", round_int(c.no2)) },
-    { label = "SULFUR DIOXIDE", value = string.format("%03d", round_int(c.so2)) },
-    { label = "CARBON MONOXIDE", value = string.format("%03d", round_int(c.co)) },
-    { label = "AMMONIA", value = string.format("%03d", round_int(c.nh3)) },
+    { label = "PARTICULATE MATTER 2.5", value = real_value(c.pm2_5) },
+    { label = "OZONE", value = real_value(c.o3) },
+    { label = "PARTICULATE MATTER 10", value = real_value(c.pm10) },
+    { label = "NITROGEN DIOXIDE", value = real_value(c.no2) },
+    { label = "SULFUR DIOXIDE", value = real_value(c.so2) },
+    { label = "CARBON MONOXIDE", value = real_value(c.co) },
+    { label = "AMMONIA", value = real_value(c.nh3) },
   }
 end
 
@@ -723,10 +733,10 @@ function M.pollen_rows()
   refresh()
   local p = CACHE.pollen or {}
   return {
-    { label = "TREE", value = string.format("%03d", round_int(p.tree)) },
-    { label = "GRASS", value = string.format("%03d", round_int(p.grass)) },
-    { label = "WEED", value = string.format("%03d", round_int(p.weed)) },
-    { label = "MOLD", value = string.format("%03d", round_int(p.mold)) },
+    { label = "TREE", value = real_value(p.tree, true) },
+    { label = "GRASS", value = real_value(p.grass, true) },
+    { label = "WEED", value = real_value(p.weed, true) },
+    { label = "MOLD", value = real_value(p.mold, true) },
   }
 end
 

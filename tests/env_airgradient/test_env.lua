@@ -69,23 +69,27 @@ for _, ph in ipairs({0, 7, 14}) do check("phase " .. ph .. ": outdoor", load_env
 for _, ph in ipairs({15, 22, 29}) do check("phase " .. ph .. ": indoor", load_env(ph).pollution_title() == "INDOOR // CAVE", load_env(ph).pollution_title()) end
 E = load_env(20)
 local rows = E.pollution_rows()
-local want = {{"CARBON DIOXIDE (PPM)", "482"}, {"PARTICULATE MATTER 2.5", "005"}, {"PARTICULATE MATTER 10", "007"},
-  {"PARTICULATE MATTER 1", "004"}, {"PARTICLES 0.3 (/DL)", "500"}, {"VOC INDEX", "022"}, {"NOX INDEX", "003"}}
+local want = {{"CARBON DIOXIDE (PPM)", "482"}, {"PARTICULATE MATTER 2.5", "4.90"}, {"PARTICULATE MATTER 10", "7.10"},
+  {"PARTICULATE MATTER 1", "4.40"}, {"PARTICLES 0.3 (/DL)", "500"}, {"VOC INDEX", "22"}, {"NOX INDEX", "3"}}
 check("seven indoor rows", #rows == 7)
 for i, w in ipairs(want) do check("row " .. i .. " " .. w[1] .. " = " .. w[2], rows[i].label == w[1] and rows[i].value == w[2], rows[i].label .. "=" .. rows[i].value) end
 for _, r in ipairs(rows) do
-  local four = r.label:match("PPM") or r.label:match("/DL")
-  check("label fits the column: " .. r.label, #r.label <= (four and 20 or 22))
+  check("label fits the column: " .. r.label, #r.label <= 22)
 end
 check("indoor SRC line and DATA line", E.status_lines()[2] == "SRC // AG CAVE" and E.status_lines()[1] == "DATA // NOMINAL")
 ag_status({co2 = 1150, pm03 = 3389}); rows = load_env(20).pollution_rows()
-check("CO2 1150 and PM0.3 3389 show unscaled", rows[1].value == "1150" and rows[5].value == "3389")
+check("CO2 1150 and PM0.3 3389 show unscaled, with a thousands separator", rows[1].value == "1,150" and rows[5].value == "3,389")
 ag_status({co2 = 1999, voc = 1200, pm25 = 2500}); rows = load_env(20).pollution_rows()
-check("1999 fits; three-digit rows cap at 999", rows[1].value == "1999" and rows[6].value == "999" and rows[2].value == "999")
+check("1,999 fits; VOC 1200 and PM2.5 2500 show whole, with separators", rows[1].value == "1,999" and rows[6].value == "1,200" and rows[2].value == "2,500")
 ag_status({co2 = 99999, pm03 = 99999}); rows = load_env(20).pollution_rows()
-check("four-digit rows cap at 9999", rows[1].value == "9999" and rows[5].value == "9999")
+check("every row caps at 9,999", rows[1].value == "9,999" and rows[5].value == "9,999")
+ag_status({pm25 = 5.274, pm10 = 99.996, pm1 = 123.456, voc = 7, nox = 0}); rows = load_env(20).pollution_rows()
+check("real format: 2 decimals under 100 (5.27), 99.996 rolls to 100.0, one decimal under 1,000 (123.5)",
+  rows[2].value == "5.27" and rows[3].value == "100.0" and rows[4].value == "123.5" and rows[6].value == "7" and rows[7].value == "0", rows[2].value .. " " .. rows[3].value .. " " .. rows[4].value)
+ag_status({pm25 = 999.96}); check("999.96 rolls to 1,000, never 1000.0", load_env(20).pollution_rows()[2].value == "1,000")
+check("no value is longer than five characters", (function() ag_status({co2 = 99999, pm25 = 99999, pm10 = 999.4, pm1 = 99.9, pm03 = 99999, voc = 99999, nox = 99999}) for _, r in ipairs(load_env(20).pollution_rows()) do if #r.value > 5 then return false end end return true end)())
 ag_status({co2 = 515, pm03 = 1339}); rows = load_env(20).pollution_rows()
-check("no leading zeros on CO2/PM0.3: 515 and 1339", rows[1].value == "515" and rows[5].value == "1339")
+check("no leading zeros: 515 and 1,339", rows[1].value == "515" and rows[5].value == "1,339")
 ag_status({co2 = 0}); check("CO2 0 is a value, not missing", load_env(20).pollution_rows()[1].value == "0")
 write(SC .. "/cache/shared/airgradient/indoor/status.json", '{"state":"ok","generated_at":"' .. iso(real_time() - 3) .. '","label":"X","ventilation":{"alert_visible":false}}')
 rows = load_env(20).pollution_rows(); check("missing readings show dashes", rows[1].value == "---" and rows[6].value == "---")
@@ -124,14 +128,14 @@ air_files()
 -- ---------------------------------------------------------------- outdoor PM2.5: provider value first, bounded raw fallback
 set_suite(false)
 air_files(6.7, {{age = 3000, value = 9.7, raw = 9.7}, {age = 3000, value = 12.4, raw = 12.4}}); E = load_env(5)
-check("provider value (nearest monitor) beats a different newest raw row: 007", E.pollution_rows()[1].value == "007", E.pollution_rows()[1].value)
+check("provider value (nearest monitor) beats a different newest raw row: 6.70", E.pollution_rows()[1].value == "6.70", E.pollution_rows()[1].value)
 check("SRC line lists PM2.5 as AirNow", E.status_lines()[2]:match("PM2%.5") ~= nil)
 air_files(nil, {{age = 3000, value = 8.2, raw = -999.0}}); E = load_env(5)
-check("overlay empty: raw fallback uses Value when raw is -999 (008)", E.pollution_rows()[1].value == "008", E.pollution_rows()[1].value)
+check("overlay empty: raw fallback uses Value when raw is -999 (8.20)", E.pollution_rows()[1].value == "8.20", E.pollution_rows()[1].value)
 air_files(nil, {{age = 9000, value = 8.2, raw = 8.2}}); E = load_env(5)
-check("overlay empty and raw older than 2 h: OpenWeather (013), SRC drops PM2.5", E.pollution_rows()[1].value == "013" and not E.status_lines()[2]:match("PM2%.5"))
-air_files(nil, {{age = 3000, value = 9.7, raw = 9.7}, {age = 5000, value = 7.1, raw = 7.1}}); check("raw fallback takes the newest row (010)", load_env(5).pollution_rows()[1].value == "010")
-air_files(nil, {}); check("no AirNow data: OpenWeather value (013)", load_env(5).pollution_rows()[1].value == "013")
+check("overlay empty and raw older than 2 h: OpenWeather (13.30), SRC drops PM2.5", E.pollution_rows()[1].value == "13.30" and not E.status_lines()[2]:match("PM2%.5"))
+air_files(nil, {{age = 3000, value = 9.7, raw = 9.7}, {age = 5000, value = 7.1, raw = 7.1}}); check("raw fallback takes the newest row (9.70)", load_env(5).pollution_rows()[1].value == "9.70")
+air_files(nil, {}); check("no AirNow data: OpenWeather value (13.30)", load_env(5).pollution_rows()[1].value == "13.30")
 air_files(); set_suite(true)
 
 -- ---------------------------------------------------------------- knobs: theme.env.airgradient via M.configure

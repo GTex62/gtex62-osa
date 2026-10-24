@@ -973,6 +973,8 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
   local row_y = y + header_h + 12
   local bar_x = x + label_w + header_gap
   local value_cx = bar_x + bar_col_w + (value_w / 2)
+  local value_right = bar_x + bar_col_w + value_w
+  local value_align_right = tostring(cfg.table_value_align or "center") == "right"
 
   local title_span = bar_w > 0 and (label_w + header_gap + bar_w) or label_w
   draw_split_table_header(cr, x, y, title_span, header_gap, value_w, header_h, title, "(V)", header_font_pt, theme)
@@ -996,9 +998,9 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
       local ratio = (tonumber(row.value) or 0) / bar_max
       draw_hbar(cr, bar_x, mid_y - (bar_h / 2), bar_w, bar_h, ratio, theme.colors.fg)
     end
-    draw_text_center_mid(
+    (value_align_right and draw_text_right_mid or draw_text_center_mid)(
       cr,
-      value_cx,
+      value_align_right and (value_right - 2) or value_cx,
       mid_y,
       string.upper(tostring(row.value or "")),
       theme.fonts.data,
