@@ -856,6 +856,7 @@ theme.env = {
     refresh_sec = 15,         -- how often the provider's status.json is re-read
     show_alerts = true,       -- the engine's advice on the DATA line (hidden anyway while the provider is in shadow mode)
     show_stale = true,        -- AG STALE on the DATA line when the reading is stale
+    show_notices = true,      -- event notices (PM SPIKE, VOC SPIKE) on the DATA line when no alert is showing
   },
 }
 

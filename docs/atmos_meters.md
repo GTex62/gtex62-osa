@@ -194,6 +194,6 @@ Values are validated and clamped, so a typo cannot break the panel. Restart conk
 | refresh_sec | 15 | how often status.json is re-read |
 | show_alerts | true | engine advice on the DATA line |
 | show_stale | true | AG STALE on the DATA line |
-| show_notices | true | event notices on the DATA line when no alert holds it (`PM SPIKE // 2.5: 99`, `VOC SPIKE // 485`); add the key to your theme's block to set it, absent means true |
+| show_notices | true | event notices on the DATA line when no alert holds it (`PM SPIKE // 2.5: 99`, `VOC SPIKE // 485`); a missing key means true |
 
 Tests: `tests/env_airgradient/run-tests.sh` (needs lua5.4 and jq; uses a scratch cache and a fake clock).
