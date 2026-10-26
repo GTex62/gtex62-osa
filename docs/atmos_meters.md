@@ -176,6 +176,12 @@ takes the line first, and a notice that is still active shows again once the ale
 `AG STALE` outrank notices. More than one active notice takes turns every 10 seconds. Each lasts until the reading is back to
 normal, and at most 60 minutes.
 
+The same list can carry facts about the outdoor air from gtex62-core's air provider (opt-in there): `NWS AIR QUALITY ALERT`, `NWS DENSE SMOKE
+ADVISORY` or another National Weather Service air-quality, smoke or dust product in effect at your location, and `AQI ACTION DAY: PM2.5 112`
+(`ACTION DAY TMRW: ...` for tomorrow) from AirNow's forecast. These last as long as the product does, so they outlast the advisor's 60-minute
+alert, and an Air Quality Alert, Dense Smoke Advisory or dust product also makes the advisor say `CLOSE WIN // NWS AIR QUALITY` (or `NWS DENSE SMOKE`,
+`NWS DUST`).
+
 Theme knobs (`theme.env.airgradient` in theme/osa-theme.lua; omit any key for its default, shown below). The shipped theme
 sets `enabled = false`, so set it to `true` as well as binding the domain in osa.toml. (With the whole block omitted
 the code treats `enabled` as true.)
