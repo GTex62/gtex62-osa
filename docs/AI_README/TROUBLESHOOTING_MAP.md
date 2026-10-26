@@ -199,9 +199,14 @@ Smallest safe fix:
   (Older readings keep the panel on the outdoor view and put `AG STALE` on the DATA line.)
 - `AG STALE` on the DATA line: the provider loop is not running or the device is unreachable.
   Check `osa-airgradient-refresh.pid`, `shared/airgradient/<profile>/fetch.log`, and `core.toml [providers] airgradient`.
-- No alert text during a real episode: the provider ships in shadow mode (`[advisor] shadow = true`);
+- No alert text during a real episode: is the provider still in shadow mode (`[advisor] shadow = true`, the shipped default)?
   the verdict is in `status.json` and in `verdict_log.txt` in the provider's `log_dir`
   (default `~/.local/share/gtex62-core/airgradient/<profile>/logs/`; see the profile's `[advisor] log_dir`).
+- `1H` / `24H` columns show `--`: no comparison yet. `1H` needs an hour of provider history (or the Home Assistant export, `[trend] use_ha_export`
+  in the airgradient profile); `24H` needs yesterday's readings or logs. Is `trend` in `status.json`? An older core than 0.16.0 has none.
+- `| HA` on the SRC line: the trend was compared against Home Assistant history (`trend_from_ha` in `status.json`); it goes away on its own.
+- `PM SPIKE` or `VOC SPIKE` on the DATA line: an event notice from the provider (`notices` in `status.json`, `[notices] enabled` in the profile).
+  Advisor alerts win over it; it is cut off by `show_notices = false` in `theme.env.airgradient`.
 - Engine-side questions (readings, verdicts, alert wording) belong to gtex62-core, not this repo.
 
 ### First Mechanical Checks
