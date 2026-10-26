@@ -123,30 +123,41 @@ Rotation (clock-driven, no stored state; defaults shown, all adjustable in the k
 - While an alert is visible: 10 s outdoor, 20 s indoor.
 - Outdoor view only if the reading is older than 3 minutes or the provider is disabled or in error.
 
-Indoor table (same seven rows, same (V) column; header `INDOOR // <LABEL> (V)`, or `INDOOR (V)` when
-the profile has no `label`; the SRC line reads `SRC // AG <LABEL>`):
+Indoor table (same seven rows as the outdoor POLLUTION table, with the (V) column and two trend columns; the header reads
+`INDOOR // <LABEL>` when that fits in 12 characters and `INDOOR` alone when it does not, since the name is also on the SRC
+line, `SRC // AG <LABEL>`):
 
 | Row | Label | Value |
 | --- | --- | --- |
-| 1 | CARBON DIOXIDE (PPM) | ppm, a whole number (482 shows 482, 1,150 shows 1,150) |
-| 2 | PARTICULATE MATTER 2.5 | ug/m3 (humidity-compensated, as Home Assistant shows it) |
-| 3 | PARTICULATE MATTER 10 | ug/m3 |
-| 4 | PARTICULATE MATTER 1 | ug/m3 |
-| 5 | PARTICLES 0.3 (/DL) | particles/dL, a whole number (3,389 shows 3,389) |
+| 1 | CO2 (PPM) | ppm, a whole number (482 shows 482, 1,150 shows 1,150) |
+| 2 | PM 2.5 | ug/m3 (humidity-compensated, as Home Assistant shows it) |
+| 3 | PM 10 | ug/m3 |
+| 4 | PM 1 | ug/m3 |
+| 5 | PM 0.3 (/DL) | particles/dL, a whole number (3,389 shows 3,389) |
 | 6 | VOC INDEX | index |
 | 7 | NOX INDEX | index |
 
-The (V) column is right-aligned and shows each value as its source reports it, in at most five characters, for
+The outdoor POLLUTION rows use the same short names (PM 2.5, OZONE, PM 10, NO2, SO2, CO, NH3).
+
+**The (V) column** is right-aligned and shows each value as its source reports it, in at most five characters, for
 the outdoor POLLUTION and POLLEN rows as well: two decimals under 100 (`5.27`, `12.34`), one decimal under 1,000
 (`121.3`), a whole number with a thousands separator above (`1,107`), capped at `9,999`. CO2, PM0.3, the VOC and NOx
 indexes and the pollen indexes are always whole numbers (a pollen index of 0 shows `0`, not `000`). A missing value shows
-`---`. PM2.5 can read below PM1: only PM2.5 is humidity-compensated. The width comes from `table_value_w` (50) in
-`theme.env.atmos`, taken out of the SOLAR gauge (`solar_meter_w` 122, `solar_value_spread` 40, `meter_value_font_pt` 18, so a
-four-character UV or RAD such as `10.8` or `1043` still sits clear of its bar); `table_value_align` is `"right"` (set it to
-`"center"` for the old centered look).
-A theme file from before 0.5.1 (`table_value_w` 36, no `table_value_align`) still draws cleanly: the column widens to the widest value
-shown and the values right-align by default, but the SOLAR numbers keep the old 20 pt size, so copy the five values above into your
-`osa-theme.lua` to get the intended layout.
+`---`. PM2.5 can read below PM1: only PM2.5 is humidity-compensated.
+
+**The trend columns (1H and 24H)** on the pollution table show the change in each indoor reading over the last hour and
+the last 24 hours, in whole percent with a sign (`+12%`, `-5%`, `0%`). The engine computes them (the `trend` block of the
+AirGradient `status.json`, see gtex62-core's airgradient-provider-design.md): the last 10 minutes of readings against the
+same 10 minutes an hour or a day earlier, `0%` when the change is under a per-metric noise floor, and `--` when there is
+no comparison point yet (the provider was not running then; the 1H column is `--` for the first hour after a boot, and the
+24H column is available at once because the provider seeds its history from its own input logs). The outdoor view shows the
+same headers with blank cells, and the POLLEN table has only the name, bar and value columns.
+
+**Widths** (`theme.env.atmos`): `table_value_w` 50 and two `table_trend_w` 46, taken out of the label column and the SOLAR
+gauge (`solar_meter_w` 108, `solar_value_spread` 36, `meter_value_font_pt` 15, so a four-character UV or RAD such as `10.8`
+or `1043` still sits clear of its bar); `table_value_align` is `"right"` (`"center"` is the old centered look). A theme
+file from before 0.5.1 still draws cleanly (the value column widens to the widest value and the values right-align by
+default), but copy these values into your `osa-theme.lua` to get the intended layout.
 
 DATA line: the engine's alert text (29 characters or fewer, e.g. `OPEN WIN // CO2 1150 PPM`)
 replaces `NOMINAL` in both views while an alert is visible; it never replaces an outdoor FAULT,
@@ -163,7 +174,7 @@ Values are validated and clamped, so a typo cannot break the panel. Restart conk
 | --- | --- | --- |
 | enabled | true (shipped theme: false) | false: outdoor view only, no AirGradient alerts, no AG STALE |
 | label | nil | name after the table title, e.g. `"CAVE"` (8 characters max, upper-cased); nil uses the provider profile's `label`, `""` shows no name |
-| title | "INDOOR" | table title, 8 characters max (`INDOOR // CAVE`) |
+| title | "INDOOR" | table title, 8 characters max; the name is added (`INDOOR // CAVE`) only when the whole header fits in 12 characters |
 | source_tag | "AG" | tag on the SRC line, 6 characters max (`SRC // AG CAVE`) |
 | cycle_sec | 30 | one outdoor + indoor rotation (2 to 3600) |
 | outdoor_sec | 15 | outdoor share of the cycle (0 = indoor all the time) |

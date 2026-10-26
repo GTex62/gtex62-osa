@@ -596,6 +596,21 @@ local function draw_text_right_mid(cr, x, y, txt, font_face, font_size, color, w
   cairo_show_text(cr, txt)
 end
 
+-- Right-aligned, vertically centered on the height of a digit rather than of the text itself, so a run of
+-- hyphens ("--", "---") sits on the same line as the numbers around it instead of floating above it.
+local function draw_text_right_digit_mid(cr, x, y, txt, font_face, font_size, color, weight)
+  if not txt or txt == "" then return end
+  set_rgb(cr, color)
+  cairo_select_font_face(cr, font_face, CAIRO_FONT_SLANT_NORMAL, weight or CAIRO_FONT_WEIGHT_NORMAL)
+  cairo_set_font_size(cr, font_size)
+  local ext = cairo_text_extents_t:create()
+  local ref = cairo_text_extents_t:create()
+  cairo_text_extents(cr, txt, ext)
+  cairo_text_extents(cr, "0", ref)
+  cairo_move_to(cr, x - (ext.width + ext.x_bearing), y + (ref.height / 2))
+  cairo_show_text(cr, txt)
+end
+
 local function draw_text_block_left(cr, x, y, lines, font_face, font_size, color, line_step, weight)
   if type(lines) ~= "table" then return end
   local step = tonumber(line_step) or font_size
@@ -958,7 +973,7 @@ local function draw_env_meter(cr, theme, x, y, w, cfg, label, value, bar_specs, 
   draw_table_header(cr, x + footer_w + footer_gap, footer_y, footer_w, footer_h, footer_right, font_pt, theme)
 end
 
-local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_limit, bar_max)
+local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_limit, bar_max, trend_cols)
   local header_h = tonumber(cfg.header_h) or 16
   local header_gap = tonumber(cfg.header_gap) or 2
   local value_w = tonumber(cfg.table_value_w) or 50
@@ -980,7 +995,10 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
     end
     value_w = math.max(value_w, math.ceil(widest) + 6)
   end
-  local label_w = fixed_label_w or (w - value_w - header_gap)
+  -- With trend columns (the pollution table: 1H and 24H change) the label column gives up their width.
+  local trend_w = trend_cols and (tonumber(cfg.table_trend_w) or 46) or 0
+  local trend_span = trend_cols and (2 * (trend_w + header_gap)) or 0
+  local label_w = fixed_label_w or (w - value_w - header_gap - trend_span)
   local bar_w = bar_max and (w - label_w - (header_gap * 2) - value_w) or 0
   local bar_col_w = bar_w > 0 and (bar_w + header_gap) or 0
   local row_y = y + header_h + 12
@@ -991,6 +1009,12 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
 
   local title_span = bar_w > 0 and (label_w + header_gap + bar_w) or label_w
   draw_split_table_header(cr, x, y, title_span, header_gap, value_w, header_h, title, "(V)", header_font_pt, theme)
+  local col1_x = bar_x + bar_col_w + value_w + header_gap
+  local col2_x = col1_x + trend_w + header_gap
+  if trend_cols then
+    draw_table_header(cr, col1_x, y, trend_w, header_h, "1H", header_font_pt, theme)
+    draw_table_header(cr, col2_x, y, trend_w, header_h, "24H", header_font_pt, theme)
+  end
   draw_rect(cr, x, y + header_h + 1, w, 1, theme.strokes.line, theme.colors.fg)
 
   rows = rows or {}
@@ -1011,7 +1035,7 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
       local ratio = (tonumber(row.value) or 0) / bar_max
       draw_hbar(cr, bar_x, mid_y - (bar_h / 2), bar_w, bar_h, ratio, theme.colors.fg)
     end
-    (value_align_right and draw_text_right_mid or draw_text_center_mid)(
+    (value_align_right and draw_text_right_digit_mid or draw_text_center_mid)(
       cr,
       value_align_right and (value_right - 2) or value_cx,
       mid_y,
@@ -1021,6 +1045,22 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
       theme.colors.fg,
       CAIRO_FONT_WEIGHT_NORMAL
     )
+    if trend_cols then
+      for _, col in ipairs({ { col1_x, row.t1 }, { col2_x, row.t24 } }) do
+        if col[2] and col[2] ~= "" then
+          draw_text_right_digit_mid(
+            cr,
+            col[1] + trend_w - 2,
+            mid_y,
+            tostring(col[2]),
+            theme.fonts.data,
+            row_font_pt,
+            theme.colors.fg,
+            CAIRO_FONT_WEIGHT_NORMAL
+          )
+        end
+      end
+    end
   end
 end
 
@@ -3269,7 +3309,9 @@ local function draw_env_content(cr, theme, layout, panels, data)
     table_cfg,
     type(env_data.pollution_title) == "function" and env_data.pollution_title() or "POLLUTION",
     type(env_data.pollution_rows) == "function" and env_data.pollution_rows() or {},
-    pollution_rows
+    pollution_rows,
+    nil,
+    true
   )
 
   draw_env_atmos_table(

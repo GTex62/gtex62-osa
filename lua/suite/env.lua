@@ -398,6 +398,7 @@ end
 -- Every entry point is pcall-wrapped by the callers below: any failure here
 -- leaves the panel on its normal outdoor view.
 ----------------------------------------------------------------
+local AG_TITLE_MAX_CHARS = 12
 local AG_ALERT_MAX_CHARS = 29
 
 -- Knobs: theme.env.airgradient in theme/osa-theme.lua. frame.lua pushes them in through M.configure() on every
@@ -466,7 +467,14 @@ jq -r '[
   (.voc_index // ""),
   (.nox_index // ""),
   ((.ventilation.alert_visible // false) | tostring),
-  (.ventilation.alert_text // "")
+  (.ventilation.alert_text // ""),
+  (.trend.co2_ppm.h1_pct // ""), (.trend.co2_ppm.h24_pct // ""),
+  (.trend.pm25_ugm3.h1_pct // ""), (.trend.pm25_ugm3.h24_pct // ""),
+  (.trend.pm10_ugm3.h1_pct // ""), (.trend.pm10_ugm3.h24_pct // ""),
+  (.trend.pm1_ugm3.h1_pct // ""), (.trend.pm1_ugm3.h24_pct // ""),
+  (.trend.pm03_per_dl.h1_pct // ""), (.trend.pm03_per_dl.h24_pct // ""),
+  (.trend.voc_index.h1_pct // ""), (.trend.voc_index.h24_pct // ""),
+  (.trend.nox_index.h1_pct // ""), (.trend.nox_index.h24_pct // "")
 ] | @tsv' %q 2>/dev/null]], path))
   if not out then return { available = false } end
   local f = parse_tsv(out)
@@ -484,6 +492,16 @@ jq -r '[
     nox = field_number(f, 10),
     alert_visible = f[11] == "true",
     alert_text = f[12] or "",
+    -- one-hour and 24-hour change in whole percent, from the provider (nil = no comparison yet)
+    trend = {
+      co2 = { h1 = field_number(f, 13), h24 = field_number(f, 14) },
+      pm25 = { h1 = field_number(f, 15), h24 = field_number(f, 16) },
+      pm10 = { h1 = field_number(f, 17), h24 = field_number(f, 18) },
+      pm1 = { h1 = field_number(f, 19), h24 = field_number(f, 20) },
+      pm03 = { h1 = field_number(f, 21), h24 = field_number(f, 22) },
+      voc = { h1 = field_number(f, 23), h24 = field_number(f, 24) },
+      nox = { h1 = field_number(f, 25), h24 = field_number(f, 26) },
+    },
   }
 end
 
@@ -557,6 +575,16 @@ local function real_value(v, whole)
   n = round_int(n)
   if n > 9999 then n = 9999 end
   return with_commas(n)
+end
+
+-- A trend column cell: "+12%", "-5%", "0%", or "--" when the provider has no comparison yet.
+local function trend_text(pct)
+  local n = tonumber(pct)
+  if not n then return "--" end
+  n = math.floor(n + 0.5)
+  if n > 999 then n = 999 elseif n < -999 then n = -999 end
+  if n == 0 then return "0%" end
+  return string.format("%+d%%", n)
 end
 
 local function refresh()
@@ -696,7 +724,10 @@ function M.pollution_title()
   local ok, indoor = pcall(ag_indoor_phase)
   if ok and indoor then
     local label = ag_label(ag_data())
-    return (label ~= "" and (AGCFG.title .. " // " .. label) or AGCFG.title)
+    -- The header box above the label column holds about 12 characters: a longer "TITLE // NAME" shows
+    -- the title alone (the name is still on the SRC line).
+    local full = label ~= "" and (AGCFG.title .. " // " .. label) or AGCFG.title
+    return (#full <= AG_TITLE_MAX_CHARS) and full or AGCFG.title
   end
   return "POLLUTION"
 end
@@ -705,27 +736,32 @@ function M.pollution_rows()
   local ok, indoor = pcall(ag_indoor_phase)
   if ok and indoor then
     local d = ag_data()
-    -- Labels are capped at 22 characters by the table's label column.
+    -- Labels are short (about 12 characters) because the table also carries the 1H and 24H columns.
+    local t = d.trend or {}
+    local function row(label, value, key)
+      local tk = t[key] or {}
+      return { label = label, value = value, t1 = trend_text(tk.h1), t24 = trend_text(tk.h24) }
+    end
     return {
-      { label = "CARBON DIOXIDE (PPM)", value = real_value(d.co2, true) },
-      { label = "PARTICULATE MATTER 2.5", value = real_value(d.pm25) },
-      { label = "PARTICULATE MATTER 10", value = real_value(d.pm10) },
-      { label = "PARTICULATE MATTER 1", value = real_value(d.pm1) },
-      { label = "PARTICLES 0.3 (/DL)", value = real_value(d.pm03, true) },
-      { label = "VOC INDEX", value = real_value(d.voc, true) },
-      { label = "NOX INDEX", value = real_value(d.nox, true) },
+      row("CO2 (PPM)", real_value(d.co2, true), "co2"),
+      row("PM 2.5", real_value(d.pm25), "pm25"),
+      row("PM 10", real_value(d.pm10), "pm10"),
+      row("PM 1", real_value(d.pm1), "pm1"),
+      row("PM 0.3 (/DL)", real_value(d.pm03, true), "pm03"),
+      row("VOC INDEX", real_value(d.voc, true), "voc"),
+      row("NOX INDEX", real_value(d.nox, true), "nox"),
     }
   end
   refresh()
   local c = (CACHE.air or {}).components or {}
   return {
-    { label = "PARTICULATE MATTER 2.5", value = real_value(c.pm2_5) },
+    { label = "PM 2.5", value = real_value(c.pm2_5) },
     { label = "OZONE", value = real_value(c.o3) },
-    { label = "PARTICULATE MATTER 10", value = real_value(c.pm10) },
-    { label = "NITROGEN DIOXIDE", value = real_value(c.no2) },
-    { label = "SULFUR DIOXIDE", value = real_value(c.so2) },
-    { label = "CARBON MONOXIDE", value = real_value(c.co) },
-    { label = "AMMONIA", value = real_value(c.nh3) },
+    { label = "PM 10", value = real_value(c.pm10) },
+    { label = "NO2", value = real_value(c.no2) },
+    { label = "SO2", value = real_value(c.so2) },
+    { label = "CO", value = real_value(c.co) },
+    { label = "NH3", value = real_value(c.nh3) },
   }
 end
 
