@@ -32,6 +32,7 @@ local function air_files(provider_pm, raw_rows, air_state)
     '{"provider_updated_at":"' .. iso(now) .. '","norm":{"UV":0.1,"RAD":0.2},"values":{"UV":2.9,"RAD":457},"meta":{"uv_source":"open-meteo"}}')
   write(SC .. "/cache/shared/solar/home/status.json", '{"state":"ok"}')
 end
+local TREND_FROM_HA = false
 local function trend_json(t)
   if not t then return "" end
   local parts = {}
@@ -39,7 +40,7 @@ local function trend_json(t)
     local v = t[k] or {}
     parts[#parts + 1] = string.format('"%s":{"h1_pct":%s,"h24_pct":%s}', k, v[1] == nil and "null" or tostring(v[1]), v[2] == nil and "null" or tostring(v[2]))
   end
-  return ',"trend":{' .. table.concat(parts, ",") .. "}"
+  return ',"trend":{' .. table.concat(parts, ",") .. '},"trend_from_ha":' .. tostring(TREND_FROM_HA)
 end
 
 local function ag_status(o)
@@ -113,6 +114,11 @@ check("trend cells: +3%/-4%, -12%/+85%, 0%/0%", rows[1].t1 == "+3%" and rows[1].
   rows[1].t1 .. " " .. rows[1].t24 .. " " .. rows[2].t1 .. " " .. rows[2].t24)
 check("trend cells: capped at +/-999%, a missing comparison is --", rows[4].t1 == "+999%" and rows[4].t24 == "-999%" and rows[5].t1 == "--" and rows[5].t24 == "+7%" and rows[6].t1 == "--" and rows[6].t24 == "--", rows[4].t1 .. " " .. rows[5].t1 .. " " .. rows[6].t24)
 check("trend cells: NOx -1% and 0%", rows[7].t1 == "-1%" and rows[7].t24 == "0%")
+ag_status({trend = {co2_ppm = {1, 2}}}); check("no HA data behind the trend: the SRC line is just AG CAVE", load_env(20).status_lines()[2] == "SRC // AG CAVE")
+TREND_FROM_HA = true
+ag_status({trend = {co2_ppm = {1, 2}}}); check("trend compared against Home Assistant history: SRC // AG CAVE | HA", load_env(20).status_lines()[2] == "SRC // AG CAVE | HA", load_env(20).status_lines()[2])
+check("...but not in the outdoor view", load_env(5).status_lines()[2]:match("^SRC // OWM") ~= nil and not load_env(5).status_lines()[2]:match("HA"))
+TREND_FROM_HA = false
 ag_status(); rows = load_env(20).pollution_rows()
 check("a status.json from before the trend block: every cell shows --, never an error", rows[1].t1 == "--" and rows[1].t24 == "--" and rows[7].t24 == "--")
 check("the outdoor rows have no trend cells (blank columns)", (function() set_suite(false) local r = load_env(5).pollution_rows() set_suite(true) return r[1].t1 == nil and r[1].t24 == nil end)())

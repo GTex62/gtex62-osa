@@ -153,6 +153,10 @@ no comparison point yet (the provider was not running then; the 1H column is `--
 24H column is available at once because the provider seeds its history from its own input logs). The outdoor view shows the
 same headers with blank cells, and the POLLEN table has only the name, bar and value columns.
 
+With `[trend] use_ha_export = true` in the airgradient profile (gtex62-core), the provider fills the hour (or more) it was not
+running from Home Assistant's history, so `1H` works minutes after a boot. While a number on screen was compared against that
+history the indoor SRC line reads `SRC // AG CAVE | HA`; otherwise it is just `SRC // AG CAVE`.
+
 **Widths** (`theme.env.atmos`): `table_value_w` 50 and two `table_trend_w` 46, taken out of the label column and the SOLAR
 gauge (`solar_meter_w` 108, `solar_value_spread` 36, `meter_value_font_pt` 15, so a four-character UV or RAD such as `10.8`
 or `1043` still sits clear of its bar); `table_value_align` is `"right"` (`"center"` is the old centered look). A theme

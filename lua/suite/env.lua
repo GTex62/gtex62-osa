@@ -474,7 +474,8 @@ jq -r '[
   (.trend.pm1_ugm3.h1_pct // ""), (.trend.pm1_ugm3.h24_pct // ""),
   (.trend.pm03_per_dl.h1_pct // ""), (.trend.pm03_per_dl.h24_pct // ""),
   (.trend.voc_index.h1_pct // ""), (.trend.voc_index.h24_pct // ""),
-  (.trend.nox_index.h1_pct // ""), (.trend.nox_index.h24_pct // "")
+  (.trend.nox_index.h1_pct // ""), (.trend.nox_index.h24_pct // ""),
+  ((.trend_from_ha // false) | tostring)
 ] | @tsv' %q 2>/dev/null]], path))
   if not out then return { available = false } end
   local f = parse_tsv(out)
@@ -502,6 +503,7 @@ jq -r '[
       voc = { h1 = field_number(f, 23), h24 = field_number(f, 24) },
       nox = { h1 = field_number(f, 25), h24 = field_number(f, 26) },
     },
+    trend_from_ha = f[27] == "true",
   }
 end
 
@@ -633,9 +635,12 @@ local function source_line()
   refresh()
   local ok, indoor = pcall(ag_indoor_phase)
   if ok and indoor then
-    local label = ag_label(ag_data())
+    local d = ag_data()
+    local label = ag_label(d)
     local tag = "SRC // " .. AGCFG.source_tag
-    return (label ~= "" and (tag .. " " .. label) or tag)
+    local line = (label ~= "" and (tag .. " " .. label) or tag)
+    -- "| HA" while a trend number on screen was compared against history from Home Assistant.
+    return d.trend_from_ha and (line .. " | HA") or line
   end
   local air = CACHE.air or {}
   local parts = {}
