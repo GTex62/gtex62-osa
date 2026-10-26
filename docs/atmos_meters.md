@@ -169,6 +169,13 @@ PARTIAL or STALE state. `AG STALE` replaces `NOMINAL` when the AirGradient readi
 3 minutes old. Alerts are hidden while the provider is in shadow mode (`[advisor] shadow = true` in
 its profile), which is how it ships.
 
+Event notices (gtex62-core's optional `[notices] enabled = true`): when no alert holds the line, a notice from the provider shows in
+its place, in either view: `DATA // PM SPIKE // 2.5: 99` when PM2.5 jumps to at least 3 times its recent baseline (and up 10
+ug/m3), `DATA // VOC SPIKE // 485` when VOC rises 150 over it. They state what was measured and never guess a cause. An advisor alert
+takes the line first, and a notice that is still active shows again once the alert ends; an outdoor FAULT, PARTIAL or STALE state and
+`AG STALE` outrank notices. More than one active notice takes turns every 10 seconds. Each lasts until the reading is back to
+normal, and at most 60 minutes.
+
 Theme knobs (`theme.env.airgradient` in theme/osa-theme.lua; omit any key for its default, shown below). The shipped theme
 sets `enabled = false`, so set it to `true` as well as binding the domain in osa.toml. (With the whole block omitted
 the code treats `enabled` as true.)
@@ -187,5 +194,6 @@ Values are validated and clamped, so a typo cannot break the panel. Restart conk
 | refresh_sec | 15 | how often status.json is re-read |
 | show_alerts | true | engine advice on the DATA line |
 | show_stale | true | AG STALE on the DATA line |
+| show_notices | true | event notices on the DATA line when no alert holds it (`PM SPIKE // 2.5: 99`, `VOC SPIKE // 485`); add the key to your theme's block to set it, absent means true |
 
 Tests: `tests/env_airgradient/run-tests.sh` (needs lua5.4 and jq; uses a scratch cache and a fake clock).

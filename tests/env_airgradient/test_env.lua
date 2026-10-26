@@ -43,6 +43,13 @@ local function trend_json(t)
   return ',"trend":{' .. table.concat(parts, ",") .. '},"trend_from_ha":' .. tostring(TREND_FROM_HA)
 end
 
+local function notices_json(list)
+  if not list then return "" end
+  local parts = {}
+  for _, text in ipairs(list) do parts[#parts + 1] = string.format('{"type":"x","text":"%s"}', text) end
+  return ',"notices":[' .. table.concat(parts, ",") .. "]"
+end
+
 local function ag_status(o)
   o = o or {}
   local now = real_time()
@@ -51,7 +58,7 @@ local function ag_status(o)
     [[{"state":"%s","label":"%s","generated_at":%s,"co2_ppm":%s,"pm":{"pm03_per_dl":%s,"pm1_ugm3":%s,"pm25_ugm3":%s,"pm10_ugm3":%s},"voc_index":%s,"nox_index":%s,"ventilation":{"alert_visible":%s,"alert_text":"%s"}%s}]],
     o.state or "ok", o.label or "CAVE", o.no_gen and "null" or ('"' .. iso(gen) .. '"'),
     o.co2 or 482, o.pm03 or 500, o.pm1 or 4.4, o.pm25 or 4.9, o.pm10 or 7.1, o.voc or 22, o.nox or 3,
-    o.alert and "true" or "false", o.alert or "", trend_json(o.trend)))
+    o.alert and "true" or "false", o.alert or "", trend_json(o.trend) .. notices_json(o.notices)))
 end
 
 local base = math.floor(real_time() / 30) * 30
@@ -122,6 +129,31 @@ TREND_FROM_HA = false
 ag_status(); rows = load_env(20).pollution_rows()
 check("a status.json from before the trend block: every cell shows --, never an error", rows[1].t1 == "--" and rows[1].t24 == "--" and rows[7].t24 == "--")
 check("the outdoor rows have no trend cells (blank columns)", (function() set_suite(false) local r = load_env(5).pollution_rows() set_suite(true) return r[1].t1 == nil and r[1].t24 == nil end)())
+
+-- ---------------------------------------------------------------- event notices
+ag_status({notices = {"PM SPIKE // 2.5: 99"}})
+check("a notice takes the DATA line when there is no alert", load_env(5).status_lines()[1] == "DATA // PM SPIKE // 2.5: 99", load_env(5).status_lines()[1])
+check("...in the outdoor phase too", load_env(20).status_lines()[1] == "DATA // PM SPIKE // 2.5: 99")
+ag_status({notices = {"PM SPIKE // 2.5: 99"}, alert = "OPEN WIN // PM2.5 66.9"})
+check("an advisor alert wins over a notice", load_env(5).status_lines()[1] == "DATA // OPEN WIN // PM2.5 66.9")
+ag_status({notices = {"PM SPIKE // 2.5: 99"}})
+check("when the alert ends the notice shows in its place", load_env(5).status_lines()[1] == "DATA // PM SPIKE // 2.5: 99")
+ag_status({notices = {"PM SPIKE // 2.5: 99"}, gen_age = 400})
+check("a stale reading says AG STALE, not the old notice", load_env(5).status_lines()[1] == "DATA // AG STALE")
+ag_status({notices = {"PM SPIKE // 2.5: 99"}}); air_files(nil, nil, '{"state":"error"}')
+check("an outdoor air fault outranks a notice", load_env(5).status_lines()[1]:match("FAULT") ~= nil, load_env(5).status_lines()[1])
+air_files()
+ag_status({notices = {"PM SPIKE // 2.5: 99", "VOC SPIKE // 485"}})
+local first, second = load_env(0).status_lines()[1], load_env(10).status_lines()[1]
+check("two notices take turns every 10 seconds", first ~= second and (first:match("PM SPIKE") or first:match("VOC SPIKE")) and (second:match("PM SPIKE") or second:match("VOC SPIKE")), first .. " / " .. second)
+ag_status({notices = {"PM SPIKE // 2.5: 99"}})
+check("show_notices = false: NOMINAL", load_env(5, {show_notices = false}).status_lines()[1] == "DATA // NOMINAL")
+ag_status({notices = {string.rep("X", 40)}})
+check("a notice is cut to 29 characters", #load_env(5).status_lines()[1] == #"DATA // " + 29)
+ag_status()
+check("no notices: NOMINAL", load_env(5).status_lines()[1] == "DATA // NOMINAL")
+write(SC .. "/cache/shared/airgradient/indoor/status.json", '{"state":"ok","generated_at":"' .. iso(real_time() - 3) .. '","label":"X","notices":null,"ventilation":{"alert_visible":false}}')
+check("a null notices field is no notice, no error", load_env(5).status_lines()[1] == "DATA // NOMINAL")
 
 -- ---------------------------------------------------------------- alerts
 ag_status({alert = "OPEN WIN // CO2 1150 PPM", co2 = 1150})

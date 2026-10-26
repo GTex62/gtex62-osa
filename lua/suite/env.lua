@@ -422,6 +422,7 @@ local function ag_settings(t)
     enabled = t.enabled ~= false,           -- false: no indoor view, no AirGradient alerts, no AG STALE
     show_alerts = t.show_alerts ~= false,   -- the engine's advice on the DATA line
     show_stale = t.show_stale ~= false,     -- AG STALE on the DATA line
+    show_notices = t.show_notices ~= false, -- PM SPIKE / VOC SPIKE notices on the DATA line (when no alert is showing)
     label = (t.label ~= nil) and ag_text(t.label, 8) or nil,   -- nil: use the provider profile's label
   }
   c.title = ag_text(t.title ~= nil and t.title or "INDOOR", 8)
@@ -475,7 +476,8 @@ jq -r '[
   (.trend.pm03_per_dl.h1_pct // ""), (.trend.pm03_per_dl.h24_pct // ""),
   (.trend.voc_index.h1_pct // ""), (.trend.voc_index.h24_pct // ""),
   (.trend.nox_index.h1_pct // ""), (.trend.nox_index.h24_pct // ""),
-  ((.trend_from_ha // false) | tostring)
+  ((.trend_from_ha // false) | tostring),
+  ([(.notices // [])[]?.text] | join("~"))
 ] | @tsv' %q 2>/dev/null]], path))
   if not out then return { available = false } end
   local f = parse_tsv(out)
@@ -504,6 +506,7 @@ jq -r '[
       nox = { h1 = field_number(f, 25), h24 = field_number(f, 26) },
     },
     trend_from_ha = f[27] == "true",
+    notices = (f[28] and f[28] ~= "") and f[28] or "",   -- texts joined with "~", most important first
   }
 end
 
@@ -532,6 +535,16 @@ end
 local function ag_fresh(d)
   local age = ag_age(d)
   return ag_running(d) and age ~= nil and age <= AGCFG.stale_sec
+end
+
+-- The provider's event notices ("PM SPIKE // 2.5: 99"): facts, shown when no alert holds the DATA line. With
+-- more than one, they take turns every 10 seconds.
+local function ag_notice_text(d)
+  if not AGCFG.show_notices or not d.notices or d.notices == "" then return nil end
+  local list = {}
+  for text in d.notices:gmatch("[^~]+") do list[#list + 1] = text:sub(1, AG_ALERT_MAX_CHARS) end
+  if #list == 0 then return nil end
+  return list[(math.floor(os.time() / 10) % #list) + 1]
 end
 
 local function ag_alert_text(d)
@@ -624,7 +637,7 @@ local function data_status()
     local d = ag_data()
     if not ag_running(d) then return nil end
     if not ag_fresh(d) then return AGCFG.show_stale and "AG STALE" or nil end
-    return ag_alert_text(d)
+    return ag_alert_text(d) or ag_notice_text(d)
   end)
   if ok and text then return text, nil end
 
