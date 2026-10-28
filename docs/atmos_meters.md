@@ -151,8 +151,8 @@ AirGradient `status.json`, see gtex62-core's airgradient-provider-design.md): th
 same 10 minutes an hour or a day earlier, `0%` when the change is under a per-metric noise floor, and `--` when there is
 no comparison point yet (the provider was not running then; the 1H column is `--` for the first hour after a boot, and the
 24H column is available at once because the provider seeds its history from its own input logs). The outdoor view has the same columns: with the air provider's `[trend] outdoor = true` (gtex62-core, off by default) its rows show
-the change in each outdoor reading the same way, from the provider's own history (the `1H` column needs an hour of running, `24H` the second
-day, and the readings update hourly at best, so they move in steps); without it the cells stay blank. The POLLEN table has only the name, bar and value columns.
+the change in each outdoor reading the same way, from the provider's own history, seeded at start from AirNow's and OpenWeather's (the readings update hourly at best, so they
+move in steps); without it the cells stay blank. The POLLEN table has only the name, bar and value columns.
 
 With `[trend] use_ha_export = true` in the airgradient profile (gtex62-core), the provider fills the hour (or more) it was not
 running from Home Assistant's history, so `1H` works minutes after a boot. While a number on screen was compared against that
