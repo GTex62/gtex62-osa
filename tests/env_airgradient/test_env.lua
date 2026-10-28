@@ -155,6 +155,35 @@ check("no notices: NOMINAL", load_env(5).status_lines()[1] == "DATA // NOMINAL")
 write(SC .. "/cache/shared/airgradient/indoor/status.json", '{"state":"ok","generated_at":"' .. iso(real_time() - 3) .. '","label":"X","notices":null,"ventilation":{"alert_visible":false}}')
 check("a null notices field is no notice, no error", load_env(5).status_lines()[1] == "DATA // NOMINAL")
 
+-- ---------------------------------------------------------------- outdoor trend columns (the air provider's extras.json)
+local function write_extras(age, values)
+  local parts = {}
+  for _, k in ipairs({"pm2_5", "o3", "pm10", "no2", "so2", "co", "nh3"}) do
+    local v = (values or {})[k]
+    parts[#parts + 1] = string.format('"%s":{"h1_pct":%s,"h24_pct":%s}', k, (v and v[1] ~= nil) and tostring(v[1]) or "null", (v and v[2] ~= nil) and tostring(v[2]) or "null")
+  end
+  write(SC .. "/cache/shared/air/home/extras.json", string.format('{"trend":{"ok":true,"computed_at":"%s","values":{%s}}}', iso(real_time() - age), table.concat(parts, ",")))
+end
+set_suite(false)
+air_files()
+os.remove(SC .. "/cache/shared/air/home/extras.json")
+rows = load_env(5).pollution_rows()
+check("no extras.json: the outdoor rows have no trend cells (blank columns)", rows[1].t1 == nil and rows[1].t24 == nil and rows[7].t1 == nil)
+write_extras(300, {pm2_5 = {12, -8}, o3 = {0, 0}, pm10 = {-3, nil}, no2 = {nil, nil}, co = {1500, -1500}})
+rows = load_env(5).pollution_rows()
+check("outdoor trend cells: PM 2.5 +12% / -8%, OZONE 0% / 0%", rows[1].t1 == "+12%" and rows[1].t24 == "-8%" and rows[2].t1 == "0%" and rows[2].t24 == "0%", rows[1].t1 .. " " .. rows[1].t24)
+check("PM 10 -3% / --, NO2 -- / --, SO2 (not in the file) -- / --, CO capped at +999% / -999%",
+      rows[3].t1 == "-3%" and rows[3].t24 == "--" and rows[4].t1 == "--" and rows[4].t24 == "--" and rows[5].t1 == "--" and rows[7].t24 == "--" and rows[6].t1 == "+999%" and rows[6].t24 == "-999%")
+write_extras(7200, {pm2_5 = {12, -8}})
+rows = load_env(5).pollution_rows()
+check("a trend more than 90 minutes old (the air loop stopped) is not shown: blank", rows[1].t1 == nil and rows[1].t24 == nil)
+write(SC .. "/cache/shared/air/home/extras.json", '{"forecast":{"ok":true}}')
+check("an extras.json with no trend block: blank cells, no error", load_env(5).pollution_rows()[1].t1 == nil)
+write(SC .. "/cache/shared/air/home/extras.json", "{not json")
+check("a garbage extras.json: blank cells, no error", load_env(5).pollution_rows()[1].t1 == nil and load_env(5).pollution_rows()[1].value ~= nil)
+os.remove(SC .. "/cache/shared/air/home/extras.json")
+set_suite(true)
+
 -- ---------------------------------------------------------------- alerts
 ag_status({alert = "OPEN WIN // CO2 1150 PPM", co2 = 1150})
 for _, ph in ipairs({0, 12, 25}) do check("alert on the DATA line at phase " .. ph, load_env(ph).status_lines()[1] == "DATA // OPEN WIN // CO2 1150 PPM") end

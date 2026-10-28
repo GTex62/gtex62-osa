@@ -275,9 +275,41 @@ jq -r '[
   -- The provider's value (nearest AirNow monitor, age-limited) wins; the raw read is only a fallback.
   local airnow_pm25 = json_number(path, ".airnow.values.pm2_5 // empty") or raw_airnow_pm25
 
+  -- The outdoor 1H / 24H change from the air provider's optional extras.json (nil when the file or its trend block is absent).
+  local trend = nil
+  local extras_path = sibling_raw_path(path, "extras.json")
+  if extras_path then
+    local tout = command_output(string.format([[
+jq -r '[
+  (if .trend.computed_at then (.trend.computed_at | fromdateiso8601) else "" end),
+  (.trend.values.pm2_5.h1_pct // ""), (.trend.values.pm2_5.h24_pct // ""),
+  (.trend.values.o3.h1_pct // ""), (.trend.values.o3.h24_pct // ""),
+  (.trend.values.pm10.h1_pct // ""), (.trend.values.pm10.h24_pct // ""),
+  (.trend.values.no2.h1_pct // ""), (.trend.values.no2.h24_pct // ""),
+  (.trend.values.so2.h1_pct // ""), (.trend.values.so2.h24_pct // ""),
+  (.trend.values.co.h1_pct // ""), (.trend.values.co.h24_pct // ""),
+  (.trend.values.nh3.h1_pct // ""), (.trend.values.nh3.h24_pct // "")
+] | @tsv' %q 2>/dev/null]], extras_path))
+    local tf = tout and parse_tsv(tout) or {}
+    local at = field_number(tf, 1)
+    if at then
+      trend = {
+        at = at,
+        pm2_5 = { h1 = field_number(tf, 2), h24 = field_number(tf, 3) },
+        o3 = { h1 = field_number(tf, 4), h24 = field_number(tf, 5) },
+        pm10 = { h1 = field_number(tf, 6), h24 = field_number(tf, 7) },
+        no2 = { h1 = field_number(tf, 8), h24 = field_number(tf, 9) },
+        so2 = { h1 = field_number(tf, 10), h24 = field_number(tf, 11) },
+        co = { h1 = field_number(tf, 12), h24 = field_number(tf, 13) },
+        nh3 = { h1 = field_number(tf, 14), h24 = field_number(tf, 15) },
+      }
+    end
+  end
+
   return {
     available = true,
     path = path,
+    trend = trend,
     status_state = status_path and json_query(status_path, ".state // empty") or nil,
     updated_ts = json_timestamp(path, ".provider_updated_at // .generated_at // .openweather.observed_ts // .airnow.latest_ts // empty")
       or (status_path and json_timestamp(status_path, ".provider_updated_at // .generated_at // empty")),
@@ -772,14 +804,25 @@ function M.pollution_rows()
   end
   refresh()
   local c = (CACHE.air or {}).components or {}
+  -- 1H / 24H cells only while the provider's trend is fresh (it stops updating when the air loop does); otherwise blank.
+  local tr = (CACHE.air or {}).trend
+  if tr and tr.at and (os.time() - tr.at) > 5400 then tr = nil end
+  local function row(label, value, key)
+    local r = { label = label, value = value }
+    if tr then
+      local tk = tr[key] or {}
+      r.t1, r.t24 = trend_text(tk.h1), trend_text(tk.h24)
+    end
+    return r
+  end
   return {
-    { label = "PM 2.5", value = real_value(c.pm2_5) },
-    { label = "OZONE", value = real_value(c.o3) },
-    { label = "PM 10", value = real_value(c.pm10) },
-    { label = "NO2", value = real_value(c.no2) },
-    { label = "SO2", value = real_value(c.so2) },
-    { label = "CO", value = real_value(c.co) },
-    { label = "NH3", value = real_value(c.nh3) },
+    row("PM 2.5", real_value(c.pm2_5), "pm2_5"),
+    row("OZONE", real_value(c.o3), "o3"),
+    row("PM 10", real_value(c.pm10), "pm10"),
+    row("NO2", real_value(c.no2), "no2"),
+    row("SO2", real_value(c.so2), "so2"),
+    row("CO", real_value(c.co), "co"),
+    row("NH3", real_value(c.nh3), "nh3"),
   }
 end
 
