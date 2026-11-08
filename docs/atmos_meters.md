@@ -158,7 +158,7 @@ With `[trend] use_ha_export = true` in the airgradient profile (gtex62-core), th
 running from Home Assistant's history, so `1H` works minutes after a boot. While a number on screen was compared against that
 history the indoor SRC line reads `SRC // AG CAVE | HA`; otherwise it is just `SRC // AG CAVE`.
 
-**The HI and LO columns** (after `24H`) show the highest and the lowest reading of the last seven days, the raw readings as the sensor
+**The HI and LO columns** (after `24H`, with one thin vertical rule between the two groups) show the highest and the lowest reading of the last seven days, the raw readings as the sensor
 reported them (a short VOC spike counts), in at most four characters: one decimal under 100 (`4.3`, `12.3`), a whole number above
 (`488`, `1004`), `10k` from 10,000, `0` for zero (the particle lows are mostly `0`), `--` when the engine does not report them (a gtex62-core before
 the seven-day extremes; the engine fills the week from its own logs and the Home Assistant export at start, see gtex62-core's

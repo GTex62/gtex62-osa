@@ -1035,8 +1035,14 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
     draw_table_header(cr, col4_x, y, extreme_w, header_h, "LO", header_font_pt, theme)
   end
   draw_rect(cr, x, y + header_h + 1, w, 1, theme.strokes.line, theme.colors.fg)
-
   rows = rows or {}
+  if extreme_cols and #rows > 0 then
+    -- One vertical rule between the trend columns and the extremes (HI, LO): two different kinds of numbers side by side.
+    local shown = math.min(#rows, tonumber(row_limit) or #rows)
+    local rule_top = y + header_h + 3
+    local rule_bottom = row_y + ((shown - 1) * row_h) + (row_h / 2)
+    draw_rect(cr, col3_x - 1, rule_top, 1, rule_bottom - rule_top, theme.strokes.line, theme.colors.fg)
+  end
   for i = 1, math.min(#rows, tonumber(row_limit) or #rows) do
     local row = rows[i] or {}
     local mid_y = row_y + ((i - 1) * row_h)
