@@ -3294,6 +3294,7 @@ local function draw_env_content(cr, theme, layout, panels, data)
   local solar_value_spread = tonumber(cfg.solar_value_spread) or 22
   local solar_value_center_x = solar_x + (solar_w / 2)
   local solar_value_y = tonumber(cfg.solar_value_y) or aqi_value_y   -- the same height as the AQI values
+  local solar_value_font_pt = tonumber(cfg.solar_value_font_pt) or aqi_value_font_pt   -- and the same size
 
   draw_env_meter(
     cr,
@@ -3369,6 +3370,7 @@ local function draw_env_content(cr, theme, layout, panels, data)
         max_value = 100,
         value_center_x = solar_value_center_x - solar_value_spread,
         value_y = solar_value_y,
+        value_font_pt = solar_value_font_pt,
       },
       {
         value = rad_value,
@@ -3376,6 +3378,7 @@ local function draw_env_content(cr, theme, layout, panels, data)
         max_value = 100,
         value_center_x = solar_value_center_x + solar_value_spread,
         value_y = solar_value_y,
+        value_font_pt = solar_value_font_pt,
       },
     },
     "UV",
