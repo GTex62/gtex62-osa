@@ -973,7 +973,7 @@ local function draw_env_meter(cr, theme, x, y, w, cfg, label, value, bar_specs, 
   draw_table_header(cr, x + footer_w + footer_gap, footer_y, footer_w, footer_h, footer_right, font_pt, theme)
 end
 
-local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_limit, bar_max, trend_cols)
+local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_limit, bar_max, trend_cols, row_h_override)
   local header_h = tonumber(cfg.header_h) or 16
   local header_gap = tonumber(cfg.header_gap) or 2
   local value_w = tonumber(cfg.table_value_w) or 50
@@ -981,7 +981,7 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
   local fixed_label_w = bar_max and tonumber(cfg.pollen_label_w)
   local header_font_pt = tonumber(cfg.header_font_pt) or theme.text.body_xs_pt
   local row_font_pt = tonumber(cfg.row_font_pt) or theme.text.micro_pt
-  local row_h = tonumber(cfg.row_h) or 16
+  local row_h = tonumber(row_h_override) or tonumber(cfg.row_h) or 16
   -- A theme written for the old, narrower value column must still draw cleanly: widen the column to the
   -- widest value actually shown (plus a small margin) when the configured width is not enough.
   do
@@ -1040,7 +1040,7 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
     -- One vertical rule between the trend columns and the extremes (HI, LO): two different kinds of numbers side by side.
     local shown = math.min(#rows, tonumber(row_limit) or #rows)
     local rule_top = y + header_h + 3
-    local rule_bottom = row_y + ((shown - 1) * row_h) + (row_h / 2)
+    local rule_bottom = row_y + ((shown - 1) * row_h) + 7   -- a glyph's half height below the last row's centre, whatever the leading
     draw_rect(cr, col3_x - 1, rule_top, 1, rule_bottom - rule_top, theme.strokes.line, theme.colors.fg)
   end
   for i = 1, math.min(#rows, tonumber(row_limit) or #rows) do
@@ -3285,7 +3285,17 @@ local function draw_env_content(cr, theme, layout, panels, data)
   local row_h = tonumber(cfg.row_h) or 16
   local pollution_rows = tonumber(cfg.pollution_rows) or 7
   local pollen_rows = tonumber(cfg.pollen_rows) or 4
-  local pollen_y = inner_y + header_h + 12 + (pollution_rows * row_h) + table_gap
+  local pollen_y = inner_y + header_h + 12 + (pollution_rows * row_h) + table_gap   -- the pollen table stays put whatever the top table's leading
+  -- The top (pollution) table may space its rows more widely (pollution_row_h) into the room left above the pollen header, but never so far
+  -- that the last row comes within 9 pixels of it (centre to header: half a glyph plus a margin).
+  local pollution_row_h = row_h
+  do
+    local want = tonumber(cfg.pollution_row_h)
+    if want and pollution_rows > 1 then
+      local max_h = math.floor((pollen_y - table_gap - (inner_y + header_h + 12) - 9) / (pollution_rows - 1))
+      pollution_row_h = math.max(row_h, math.min(want, max_h))
+    end
+  end
 
   local aqi_airnow_value = type(env_data.aqi_airnow_value) == "function" and env_data.aqi_airnow_value() or 0
   local aqi_owm_value = type(env_data.aqi_owm_value) == "function" and env_data.aqi_owm_value() or 0
@@ -3344,7 +3354,8 @@ local function draw_env_content(cr, theme, layout, panels, data)
     type(env_data.pollution_rows) == "function" and env_data.pollution_rows() or {},
     pollution_rows,
     nil,
-    true
+    true,
+    pollution_row_h
   )
 
   draw_env_atmos_table(

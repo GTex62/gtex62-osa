@@ -809,6 +809,7 @@ theme.env = {
     header_font_pt = 16,
     row_font_pt = 15,
     row_h = 16,
+    pollution_row_h = 17,        -- row spacing of the top (pollution) table only; the pollen table keeps row_h and does not move
     table_gap = 0,
     table_value_w = 50,
     table_trend_w = 46,           -- width of each trend column (1H, 24H) in the pollution table
