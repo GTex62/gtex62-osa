@@ -165,7 +165,8 @@ the seven-day extremes; the engine fills the week from its own logs and the Home
 airgradient-provider-design.md). The outdoor view leaves the two columns blank for now.
 
 **Widths** (`theme.env.atmos`): `table_value_w` 50, two `table_trend_w` 46 and two `table_extreme_w` 40, taken out of the label column (72 pixels,
-eight characters at most) and the SOLAR gauge, which is now as narrow as the AQI meter (`solar_meter_w` 68, `solar_value_spread` 22, `meter_value_font_pt` 15; a
+eight characters at most) and the SOLAR gauge, which is now as narrow as the AQI meter (`solar_meter_w` 68, `solar_value_spread` 22, `solar_value_y` 34 (the UV and RAD values sit at the top, at the same height as the AQI values; the old
+setting centered them), `meter_value_font_pt` 15; a
 four-character RAD such as `1043` in strong sun reaches a few pixels past the gauge); `table_value_align` is `"right"` (`"center"` is the old
 centered look). The HI and LO columns appear only when the label column keeps at least `table_label_min_w` (70) pixels, so a theme file that still has the
 wider SOLAR meter (`solar_meter_w` 108) draws the table as before, without them; to get them, set `solar_meter_w = 68`, `solar_value_spread = 22`,

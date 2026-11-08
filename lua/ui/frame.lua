@@ -3293,7 +3293,7 @@ local function draw_env_content(cr, theme, layout, panels, data)
   local aqi_value_center_x = inner_x + (meter_w / 2)
   local solar_value_spread = tonumber(cfg.solar_value_spread) or 22
   local solar_value_center_x = solar_x + (solar_w / 2)
-  local solar_value_y = (table_cfg.height / 2)
+  local solar_value_y = tonumber(cfg.solar_value_y) or aqi_value_y   -- the same height as the AQI values
 
   draw_env_meter(
     cr,

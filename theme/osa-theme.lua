@@ -822,6 +822,7 @@ theme.env = {
     footer_gap = 2,
 
     aqi_value_y = 34,
+    solar_value_y = 34,          -- UV and RAD values: same height as the AQI values
     aqi_value_font_pt = 14,
     aqi_value_spread = 22,
 
