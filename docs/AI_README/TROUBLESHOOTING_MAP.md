@@ -206,7 +206,7 @@ Smallest safe fix:
   in the airgradient profile); `24H` needs yesterday's readings or logs. Is `trend` in `status.json`? An older core than 0.16.0 has none.
 - `HI` / `LO` columns missing: the label column would be under `table_label_min_w` (70 px), which is what happens with an older `osa-theme.lua` that still has
   `solar_meter_w = 108`; set `solar_meter_w = 68` (and `solar_value_spread = 22`, `table_extreme_w = 40`, `table_label_min_w = 70`). Columns there but `--` in the indoor
-  view: `status.json` has no `extremes` block (gtex62-core older than the seven-day extremes). Blank in the outdoor view: not built yet.
+  view: `status.json` has no `extremes` block (gtex62-core older than the seven-day extremes). Blank in the outdoor view: `[trend] outdoor = true` is not set in the air profile, or the air loop stopped (a trend older than 90 minutes is not shown); `--` there: `extras.json` has no `trend.extremes` (gtex62-core older than the seven-day extremes).
 - `| HA` on the SRC line: the trend was compared against Home Assistant history (`trend_from_ha` in `status.json`); it goes away on its own.
 - `PM SPIKE` or `VOC SPIKE` on the DATA line: an event notice from the provider (`notices` in `status.json`, `[notices] enabled` in the profile).
   Advisor alerts win over it; it is cut off by `show_notices = false` in `theme.env.airgradient`.

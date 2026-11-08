@@ -162,7 +162,8 @@ history the indoor SRC line reads `SRC // AG CAVE | HA`; otherwise it is just `S
 reported them (a short VOC spike counts), in at most four characters: one decimal under 100 (`4.3`, `12.3`), a whole number above
 (`488`, `1004`), `10k` from 10,000, `0` for zero (the particle lows are mostly `0`), `--` when the engine does not report them (a gtex62-core before
 the seven-day extremes; the engine fills the week from its own logs and the Home Assistant export at start, see gtex62-core's
-airgradient-provider-design.md). The outdoor view leaves the two columns blank for now.
+airgradient-provider-design.md). In the outdoor view they show the week's highest and lowest outdoor reading the same way, from the air provider's own history (gtex62-core's `[trend] outdoor = true` in the
+air profile; without it the cells stay blank, as the trend cells do), filled at start from AirNow's and OpenWeather's history.
 
 **Widths** (`theme.env.atmos`): `table_value_w` 50, two `table_trend_w` 46 and two `table_extreme_w` 40, taken out of the label column (72 pixels,
 eight characters at most) and the SOLAR gauge, which is now as narrow as the AQI meter (`solar_meter_w` 68, `solar_value_spread` 22, `solar_value_y` 34 (the UV and RAD values sit at the top, at the same height as the AQI values; the old

@@ -288,7 +288,14 @@ jq -r '[
   (.trend.values.no2.h1_pct // ""), (.trend.values.no2.h24_pct // ""),
   (.trend.values.so2.h1_pct // ""), (.trend.values.so2.h24_pct // ""),
   (.trend.values.co.h1_pct // ""), (.trend.values.co.h24_pct // ""),
-  (.trend.values.nh3.h1_pct // ""), (.trend.values.nh3.h24_pct // "")
+  (.trend.values.nh3.h1_pct // ""), (.trend.values.nh3.h24_pct // ""),
+  (.trend.extremes.pm2_5.hi // ""), (.trend.extremes.pm2_5.lo // ""),
+  (.trend.extremes.o3.hi // ""), (.trend.extremes.o3.lo // ""),
+  (.trend.extremes.pm10.hi // ""), (.trend.extremes.pm10.lo // ""),
+  (.trend.extremes.no2.hi // ""), (.trend.extremes.no2.lo // ""),
+  (.trend.extremes.so2.hi // ""), (.trend.extremes.so2.lo // ""),
+  (.trend.extremes.co.hi // ""), (.trend.extremes.co.lo // ""),
+  (.trend.extremes.nh3.hi // ""), (.trend.extremes.nh3.lo // "")
 ] | @tsv' %q 2>/dev/null]], extras_path))
     local tf = tout and parse_tsv(tout) or {}
     local at = field_number(tf, 1)
@@ -302,6 +309,16 @@ jq -r '[
         so2 = { h1 = field_number(tf, 10), h24 = field_number(tf, 11) },
         co = { h1 = field_number(tf, 12), h24 = field_number(tf, 13) },
         nh3 = { h1 = field_number(tf, 14), h24 = field_number(tf, 15) },
+        -- highest and lowest reading of the last seven days (nil = the provider does not report it)
+        ext = {
+          pm2_5 = { hi = field_number(tf, 16), lo = field_number(tf, 17) },
+          o3 = { hi = field_number(tf, 18), lo = field_number(tf, 19) },
+          pm10 = { hi = field_number(tf, 20), lo = field_number(tf, 21) },
+          no2 = { hi = field_number(tf, 22), lo = field_number(tf, 23) },
+          so2 = { hi = field_number(tf, 24), lo = field_number(tf, 25) },
+          co = { hi = field_number(tf, 26), lo = field_number(tf, 27) },
+          nh3 = { hi = field_number(tf, 28), lo = field_number(tf, 29) },
+        },
       }
     end
   end
@@ -843,14 +860,15 @@ function M.pollution_rows()
   end
   refresh()
   local c = (CACHE.air or {}).components or {}
-  -- 1H / 24H cells only while the provider's trend is fresh (it stops updating when the air loop does); otherwise blank.
+  -- 1H / 24H / HI / LO cells only while the provider's trend is fresh (it stops updating when the air loop does); otherwise blank.
   local tr = (CACHE.air or {}).trend
   if tr and tr.at and (os.time() - tr.at) > 5400 then tr = nil end
   local function row(label, value, key)
     local r = { label = label, value = value }
     if tr then
-      local tk = tr[key] or {}
+      local tk, ek = tr[key] or {}, (tr.ext or {})[key] or {}
       r.t1, r.t24 = trend_text(tk.h1), trend_text(tk.h24)
+      r.hi, r.lo = extreme_text(ek.hi), extreme_text(ek.lo)
     end
     return r
   end

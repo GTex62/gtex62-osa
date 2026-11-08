@@ -155,7 +155,7 @@ ag_status({extremes = {co2_ppm = {-5, 1}}}); rows = load_env(20).pollution_rows(
 check("HI/LO cells: a negative value reads 0, a metric the provider left out reads --", rows[1].hi == "0" and rows[2].hi == "--" and rows[2].lo == "--" and rows[7].hi == "--")
 ag_status(); rows = load_env(20).pollution_rows()
 check("a status.json from before the extremes block: every HI/LO cell shows --, never an error", rows[1].hi == "--" and rows[1].lo == "--" and rows[7].lo == "--")
-check("the outdoor rows have no HI/LO cells (blank columns for now)", (function() set_suite(false) local r = load_env(5).pollution_rows() set_suite(true) return r[1].hi == nil and r[1].lo == nil end)())
+check("the outdoor rows have no HI/LO cells without an extras.json (blank columns)", (function() set_suite(false) local r = load_env(5).pollution_rows() set_suite(true) return r[1].hi == nil and r[1].lo == nil end)())
 ag_status({label = "GREAT"}); E = load_env(20)
 check("the title honors the room the label column leaves: INDOOR // GREAT needs 15 characters (INDOOR alone with 7 or the default 12, the name with 20)",
   E.pollution_title(7) == "INDOOR" and E.pollution_title(20) == "INDOOR // GREAT" and E.pollution_title() == "INDOOR", E.pollution_title(7) .. "|" .. E.pollution_title(20) .. "|" .. E.pollution_title())
@@ -186,13 +186,19 @@ write(SC .. "/cache/shared/airgradient/indoor/status.json", '{"state":"ok","gene
 check("a null notices field is no notice, no error", load_env(5).status_lines()[1] == "DATA // NOMINAL")
 
 -- ---------------------------------------------------------------- outdoor trend columns (the air provider's extras.json)
-local function write_extras(age, values)
+local function write_extras(age, values, ext)
   local parts = {}
+  local eparts = {}
+  for _, k in ipairs({"pm2_5", "o3", "pm10", "no2", "so2", "co", "nh3"}) do
+    local e = (ext or {})[k]
+    if e then eparts[#eparts + 1] = string.format('"%s":{"hi":%s,"lo":%s}', k, e[1] == nil and "null" or tostring(e[1]), e[2] == nil and "null" or tostring(e[2])) end
+  end
   for _, k in ipairs({"pm2_5", "o3", "pm10", "no2", "so2", "co", "nh3"}) do
     local v = (values or {})[k]
     parts[#parts + 1] = string.format('"%s":{"h1_pct":%s,"h24_pct":%s}', k, (v and v[1] ~= nil) and tostring(v[1]) or "null", (v and v[2] ~= nil) and tostring(v[2]) or "null")
   end
-  write(SC .. "/cache/shared/air/home/extras.json", string.format('{"trend":{"ok":true,"computed_at":"%s","values":{%s}}}', iso(real_time() - age), table.concat(parts, ",")))
+  write(SC .. "/cache/shared/air/home/extras.json", string.format('{"trend":{"ok":true,"computed_at":"%s","values":{%s}%s}}', iso(real_time() - age), table.concat(parts, ","),
+    ext and (',"extremes":{' .. table.concat(eparts, ",") .. '},"extremes_span_h":168') or ""))
 end
 set_suite(false)
 air_files()
@@ -204,8 +210,18 @@ rows = load_env(5).pollution_rows()
 check("outdoor trend cells: PM 2.5 +12% / -8%, OZONE 0% / 0%", rows[1].t1 == "+12%" and rows[1].t24 == "-8%" and rows[2].t1 == "0%" and rows[2].t24 == "0%", rows[1].t1 .. " " .. rows[1].t24)
 check("PM 10 -3% / --, NO2 -- / --, SO2 (not in the file) -- / --, CO capped at +999% / -999%",
       rows[3].t1 == "-3%" and rows[3].t24 == "--" and rows[4].t1 == "--" and rows[4].t24 == "--" and rows[5].t1 == "--" and rows[7].t24 == "--" and rows[6].t1 == "+999%" and rows[6].t24 == "-999%")
-write_extras(7200, {pm2_5 = {12, -8}})
+write_extras(300, {pm2_5 = {12, -8}}, {pm2_5 = {13.9, 1.8}, o3 = {96.04, 0}, pm10 = {111.09, 0.04}, co = {291.42, 124.42}, no2 = {10.19, nil}})
 rows = load_env(5).pollution_rows()
+check("outdoor HI/LO cells: PM 2.5 13.9 / 1.8, OZONE 96.0 / 0, PM 10 111 / 0, CO 291 / 124 (one decimal under 100, whole above)",
+  rows[1].hi == "13.9" and rows[1].lo == "1.8" and rows[2].hi == "96.0" and rows[2].lo == "0" and rows[3].hi == "111" and rows[3].lo == "0" and rows[6].hi == "291" and rows[6].lo == "124",
+  tostring(rows[1].hi) .. " " .. tostring(rows[2].hi) .. " " .. tostring(rows[3].hi) .. " " .. tostring(rows[6].hi))
+check("outdoor HI/LO: NO2 10.2 / --, SO2 and NH3 (not in the file) -- / --", rows[4].hi == "10.2" and rows[4].lo == "--" and rows[5].hi == "--" and rows[7].lo == "--")
+write_extras(300, {pm2_5 = {12, -8}})
+rows = load_env(5).pollution_rows()
+check("a trend block from before the extremes (an older core): the trend cells show and HI/LO read --", rows[1].t1 == "+12%" and rows[1].hi == "--" and rows[1].lo == "--")
+write_extras(7200, {pm2_5 = {12, -8}}, {pm2_5 = {13.9, 1.8}})
+rows = load_env(5).pollution_rows()
+check("a trend more than 90 minutes old also blanks HI and LO", rows[1].hi == nil and rows[1].lo == nil)
 check("a trend more than 90 minutes old (the air loop stopped) is not shown: blank", rows[1].t1 == nil and rows[1].t24 == nil)
 write(SC .. "/cache/shared/air/home/extras.json", '{"forecast":{"ok":true}}')
 check("an extras.json with no trend block: blank cells, no error", load_env(5).pollution_rows()[1].t1 == nil)
