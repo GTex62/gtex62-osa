@@ -158,7 +158,7 @@ With `[trend] use_ha_export = true` in the airgradient profile (gtex62-core), th
 running from Home Assistant's history, so `1H` works minutes after a boot. While a number on screen was compared against that
 history the indoor SRC line reads `SRC // AG CAVE | HA`; otherwise it is just `SRC // AG CAVE`.
 
-**The HI and LO columns** (after `24H`, with one thin vertical rule between the two groups) show the highest and the lowest reading of the last seven days, the raw readings as the sensor
+**The HI and LO columns** (after `24H`) show the highest and the lowest reading of the last seven days, the raw readings as the sensor
 reported them (a short VOC spike counts), in at most four characters: one decimal under 100 (`4.3`, `12.3`), a whole number above
 (`488`, `1004`), `10k` from 10,000, `0` for zero (the particle lows are mostly `0`), `--` when the engine does not report them (a gtex62-core before
 the seven-day extremes; the engine fills the week from its own logs and the Home Assistant export at start, see gtex62-core's
@@ -168,7 +168,8 @@ air profile; without it the cells stay blank, as the trend cells do), filled at 
 **Widths** (`theme.env.atmos`): `table_value_w` 50, two `table_trend_w` 46 and two `table_extreme_w` 40, taken out of the label column (72 pixels,
 eight characters at most) and the SOLAR gauge, which is now as narrow as the AQI meter (`solar_meter_w` 68, `solar_value_spread` 22, `solar_value_y` 34 (the UV and RAD values sit at the top, at the same height as the AQI values; the old
 setting centered them), `solar_value_font_pt` 14 (the same size as the AQI values; it falls back to `aqi_value_font_pt`); a
-four-character RAD such as `1043` in strong sun reaches a few pixels past the gauge); `pollution_row_h` 17 spaces the rows of the top table (OUTDOOR / INDOOR) one pixel wider than the 16 of `row_h` into the room above the pollen header, which does not move (the
+four-character RAD such as `1043` in strong sun reaches a few pixels past the gauge); `table_group_rules` true draws a thin vertical line between the column groups of the top table (name | (V) | 1H 24H | HI LO) and nothing else (a full grid was tried and was too busy);
+without it, a single line separates 24H from HI; `pollution_row_h` 17 spaces the rows of the top table (OUTDOOR / INDOOR) one pixel wider than the 16 of `row_h` into the room above the pollen header, which does not move (the
 code caps it so the last row stays 9 pixels clear of that header; omit it for the old 16); `table_value_align` is `"right"` (`"center"` is the old
 centered look). The HI and LO columns appear only when the label column keeps at least `table_label_min_w` (70) pixels, so a theme file that still has the
 wider SOLAR meter (`solar_meter_w` 108) draws the table as before, without them; to get them, set `solar_meter_w = 68`, `solar_value_spread = 22`,

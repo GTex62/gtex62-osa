@@ -809,6 +809,7 @@ theme.env = {
     header_font_pt = 16,
     row_font_pt = 15,
     row_h = 16,
+    table_group_rules = true,    -- vertical lines between the column groups of the top table: name | (V) | 1H 24H | HI LO
     pollution_row_h = 17,        -- row spacing of the top (pollution) table only; the pollen table keeps row_h and does not move
     table_gap = 0,
     table_value_w = 50,

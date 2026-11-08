@@ -1036,13 +1036,23 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
   end
   draw_rect(cr, x, y + header_h + 1, w, 1, theme.strokes.line, theme.colors.fg)
   rows = rows or {}
-  if extreme_cols and #rows > 0 then
-    -- One vertical rule between the trend columns and the extremes (HI, LO): two different kinds of numbers side by side.
-    local shown = math.min(#rows, tonumber(row_limit) or #rows)
+  local shown_rows = math.min(#rows, tonumber(row_limit) or #rows)
+  if trend_cols and not fixed_label_w and cfg.table_group_rules == true and shown_rows > 0 then
+    -- table_group_rules: a vertical line between the groups of columns, name | (V) | 1H 24H | HI LO, and no other lines.
     local rule_top = y + header_h + 3
-    local rule_bottom = row_y + ((shown - 1) * row_h) + 7   -- a glyph's half height below the last row's centre, whatever the leading
+    local rule_bottom = row_y + ((shown_rows - 1) * row_h) + 7   -- a glyph's half height below the last row's centre, whatever the leading
+    local xs = { bar_x - 1, col1_x - 1 }
+    if extreme_cols then xs[#xs + 1] = col3_x - 1 end
+    for _, vx in ipairs(xs) do
+      draw_rect(cr, vx, rule_top, 1, rule_bottom - rule_top, theme.strokes.line, theme.colors.fg)
+    end
+  elseif extreme_cols and shown_rows > 0 then
+    -- One vertical rule between the trend columns and the extremes (HI, LO): two different kinds of numbers side by side.
+    local rule_top = y + header_h + 3
+    local rule_bottom = row_y + ((shown_rows - 1) * row_h) + 7   -- a glyph's half height below the last row's centre, whatever the leading
     draw_rect(cr, col3_x - 1, rule_top, 1, rule_bottom - rule_top, theme.strokes.line, theme.colors.fg)
   end
+
   for i = 1, math.min(#rows, tonumber(row_limit) or #rows) do
     local row = rows[i] or {}
     local mid_y = row_y + ((i - 1) * row_h)
