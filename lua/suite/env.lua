@@ -509,7 +509,14 @@ jq -r '[
   (.trend.voc_index.h1_pct // ""), (.trend.voc_index.h24_pct // ""),
   (.trend.nox_index.h1_pct // ""), (.trend.nox_index.h24_pct // ""),
   ((.trend_from_ha // false) | tostring),
-  ([(.notices // [])[]?.text] | join("~"))
+  ([(.notices // [])[]?.text] | join("~")),
+  (.extremes.co2_ppm.hi // ""), (.extremes.co2_ppm.lo // ""),
+  (.extremes.pm25_ugm3.hi // ""), (.extremes.pm25_ugm3.lo // ""),
+  (.extremes.pm10_ugm3.hi // ""), (.extremes.pm10_ugm3.lo // ""),
+  (.extremes.pm1_ugm3.hi // ""), (.extremes.pm1_ugm3.lo // ""),
+  (.extremes.pm03_per_dl.hi // ""), (.extremes.pm03_per_dl.lo // ""),
+  (.extremes.voc_index.hi // ""), (.extremes.voc_index.lo // ""),
+  (.extremes.nox_index.hi // ""), (.extremes.nox_index.lo // "")
 ] | @tsv' %q 2>/dev/null]], path))
   if not out then return { available = false } end
   local f = parse_tsv(out)
@@ -539,6 +546,16 @@ jq -r '[
     },
     trend_from_ha = f[27] == "true",
     notices = (f[28] and f[28] ~= "") and f[28] or "",   -- texts joined with "~", most important first
+    -- highest and lowest reading of the last seven days, from the provider (nil = not reported)
+    extremes = {
+      co2 = { hi = field_number(f, 29), lo = field_number(f, 30) },
+      pm25 = { hi = field_number(f, 31), lo = field_number(f, 32) },
+      pm10 = { hi = field_number(f, 33), lo = field_number(f, 34) },
+      pm1 = { hi = field_number(f, 35), lo = field_number(f, 36) },
+      pm03 = { hi = field_number(f, 37), lo = field_number(f, 38) },
+      voc = { hi = field_number(f, 39), lo = field_number(f, 40) },
+      nox = { hi = field_number(f, 41), lo = field_number(f, 42) },
+    },
   }
 end
 
@@ -622,6 +639,23 @@ local function real_value(v, whole)
   n = round_int(n)
   if n > 9999 then n = 9999 end
   return with_commas(n)
+end
+
+-- A HI or LO column cell, at most four characters: one decimal under 100 (4.3, 12.3), a whole number above
+-- (488, 1004), 10k and up as "10k". `whole` forces a whole number (ppm, counts, indexes). An exact zero is "0";
+-- "--" when the provider has not reported the value.
+local function extreme_text(v, whole)
+  local n = tonumber(v)
+  if not n then return "--" end
+  if n < 0 then n = 0 end
+  if not whole and n < 100 then
+    local r = math.floor(n * 10 + 0.5) / 10
+    if r == 0 then return "0" end
+    if r < 100 then return string.format("%.1f", r) end
+  end
+  n = round_int(n)
+  if n >= 10000 then return string.format("%dk", math.min(99, round_int(n / 1000))) end
+  return string.format("%d", n)
 end
 
 -- A trend column cell: "+12%", "-5%", "0%", or "--" when the provider has no comparison yet.
@@ -770,36 +804,41 @@ function M.solar_rad_text()
   return string.format("%d", round_int((CACHE.solar or {}).rad_value or 0))
 end
 
-function M.pollution_title()
+function M.pollution_title(max_chars)
   local ok, indoor = pcall(ag_indoor_phase)
   if ok and indoor then
     local label = ag_label(ag_data())
-    -- The header box above the label column holds about 12 characters: a longer "TITLE // NAME" shows
-    -- the title alone (the name is still on the SRC line).
+    -- The header box above the label column holds `max_chars` characters (frame.lua works it out from the
+    -- column width; 12 before the HI and LO columns): a longer "TITLE // NAME" shows the title alone
+    -- (the name is still on the SRC line).
     local full = label ~= "" and (AGCFG.title .. " // " .. label) or AGCFG.title
-    return (#full <= AG_TITLE_MAX_CHARS) and full or AGCFG.title
+    return (#full <= (tonumber(max_chars) or AG_TITLE_MAX_CHARS)) and full or AGCFG.title
   end
-  return "POLLUTION"
+  return "OUTDOOR"
 end
 
 function M.pollution_rows()
   local ok, indoor = pcall(ag_indoor_phase)
   if ok and indoor then
     local d = ag_data()
-    -- Labels are short (about 12 characters) because the table also carries the 1H and 24H columns.
+    -- Labels are short (8 characters at most) because the table also carries the 1H, 24H, HI and LO columns.
     local t = d.trend or {}
-    local function row(label, value, key)
-      local tk = t[key] or {}
-      return { label = label, value = value, t1 = trend_text(tk.h1), t24 = trend_text(tk.h24) }
+    local x = d.extremes or {}
+    local function row(label, value, key, whole)
+      local tk, ek = t[key] or {}, x[key] or {}
+      return {
+        label = label, value = value, t1 = trend_text(tk.h1), t24 = trend_text(tk.h24),
+        hi = extreme_text(ek.hi, whole), lo = extreme_text(ek.lo, whole),
+      }
     end
     return {
-      row("CO2 (PPM)", real_value(d.co2, true), "co2"),
+      row("CO2", real_value(d.co2, true), "co2", true),
       row("PM 2.5", real_value(d.pm25), "pm25"),
       row("PM 10", real_value(d.pm10), "pm10"),
       row("PM 1", real_value(d.pm1), "pm1"),
-      row("PM 0.3 (/DL)", real_value(d.pm03, true), "pm03"),
-      row("VOC INDEX", real_value(d.voc, true), "voc"),
-      row("NOX INDEX", real_value(d.nox, true), "nox"),
+      row("PM 0.3", real_value(d.pm03, true), "pm03", true),
+      row("VOC", real_value(d.voc, true), "voc", true),
+      row("NOX", real_value(d.nox, true), "nox", true),
     }
   end
   refresh()

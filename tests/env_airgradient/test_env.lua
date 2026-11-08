@@ -43,6 +43,16 @@ local function trend_json(t)
   return ',"trend":{' .. table.concat(parts, ",") .. '},"trend_from_ha":' .. tostring(TREND_FROM_HA)
 end
 
+local function extremes_json(t)
+  if not t then return "" end
+  local parts = {}
+  for _, k in ipairs({"co2_ppm", "pm25_ugm3", "pm10_ugm3", "pm1_ugm3", "pm03_per_dl", "voc_index", "nox_index"}) do
+    local v = t[k] or {}
+    parts[#parts + 1] = string.format('"%s":{"hi":%s,"lo":%s}', k, v[1] == nil and "null" or tostring(v[1]), v[2] == nil and "null" or tostring(v[2]))
+  end
+  return ',"extremes":{' .. table.concat(parts, ",") .. '},"extremes_span_h":168'
+end
+
 local function notices_json(list)
   if not list then return "" end
   local parts = {}
@@ -58,7 +68,7 @@ local function ag_status(o)
     [[{"state":"%s","label":"%s","generated_at":%s,"co2_ppm":%s,"pm":{"pm03_per_dl":%s,"pm1_ugm3":%s,"pm25_ugm3":%s,"pm10_ugm3":%s},"voc_index":%s,"nox_index":%s,"ventilation":{"alert_visible":%s,"alert_text":"%s"}%s}]],
     o.state or "ok", o.label or "CAVE", o.no_gen and "null" or ('"' .. iso(gen) .. '"'),
     o.co2 or 482, o.pm03 or 500, o.pm1 or 4.4, o.pm25 or 4.9, o.pm10 or 7.1, o.voc or 22, o.nox or 3,
-    o.alert and "true" or "false", o.alert or "", trend_json(o.trend) .. notices_json(o.notices)))
+    o.alert and "true" or "false", o.alert or "", trend_json(o.trend) .. extremes_json(o.extremes) .. notices_json(o.notices)))
 end
 
 local base = math.floor(real_time() / 30) * 30
@@ -76,23 +86,23 @@ air_files()
 -- ---------------------------------------------------------------- not bound: exactly the old behavior
 set_suite(false); ag_status()
 local E = load_env(20)
-check("unbound: title POLLUTION, outdoor first row, DATA/SRC lines unchanged",
-  E.pollution_title() == "POLLUTION" and E.pollution_rows()[1].label == "PM 2.5"
+check("unbound: title OUTDOOR, outdoor first row, DATA/SRC lines unchanged",
+  E.pollution_title() == "OUTDOOR" and E.pollution_rows()[1].label == "PM 2.5"
   and E.status_lines()[1] == "DATA // NOMINAL" and E.status_lines()[2]:match("^SRC // OWM BASE") ~= nil, E.status_lines()[1])
 set_suite(true)
 
 -- ---------------------------------------------------------------- rotation, rows, scaling
 ag_status()
-for _, ph in ipairs({0, 7, 14}) do check("phase " .. ph .. ": outdoor", load_env(ph).pollution_title() == "POLLUTION") end
+for _, ph in ipairs({0, 7, 14}) do check("phase " .. ph .. ": outdoor", load_env(ph).pollution_title() == "OUTDOOR") end
 for _, ph in ipairs({15, 22, 29}) do check("phase " .. ph .. ": indoor", load_env(ph).pollution_title() == "INDOOR", load_env(ph).pollution_title()) end
 E = load_env(20)
 local rows = E.pollution_rows()
-local want = {{"CO2 (PPM)", "482"}, {"PM 2.5", "4.90"}, {"PM 10", "7.10"},
-  {"PM 1", "4.40"}, {"PM 0.3 (/DL)", "500"}, {"VOC INDEX", "22"}, {"NOX INDEX", "3"}}
+local want = {{"CO2", "482"}, {"PM 2.5", "4.90"}, {"PM 10", "7.10"},
+  {"PM 1", "4.40"}, {"PM 0.3", "500"}, {"VOC", "22"}, {"NOX", "3"}}
 check("seven indoor rows", #rows == 7)
 for i, w in ipairs(want) do check("row " .. i .. " " .. w[1] .. " = " .. w[2], rows[i].label == w[1] and rows[i].value == w[2], rows[i].label .. "=" .. rows[i].value) end
 for _, r in ipairs(rows) do
-  check("label is short enough for the narrowed label column: " .. r.label, #r.label <= 13)
+  check("label is short enough for the narrowed label column (8 characters): " .. r.label, #r.label <= 8)
 end
 check("indoor SRC line and DATA line", E.status_lines()[2] == "SRC // AG CAVE" and E.status_lines()[1] == "DATA // NOMINAL")
 ag_status({co2 = 1150, pm03 = 3389}); rows = load_env(20).pollution_rows()
@@ -129,6 +139,26 @@ TREND_FROM_HA = false
 ag_status(); rows = load_env(20).pollution_rows()
 check("a status.json from before the trend block: every cell shows --, never an error", rows[1].t1 == "--" and rows[1].t24 == "--" and rows[7].t24 == "--")
 check("the outdoor rows have no trend cells (blank columns)", (function() set_suite(false) local r = load_env(5).pollution_rows() set_suite(true) return r[1].t1 == nil and r[1].t24 == nil end)())
+
+-- ---------------------------------------------------------------- HI and LO columns (7-day extremes)
+ag_status({extremes = {co2_ppm = {619, 401}, pm25_ugm3 = {23.03, 0}, pm10_ugm3 = {43.5, 0.04}, pm1_ugm3 = {123.456, 9.96},
+  pm03_per_dl = {4058, 58}, voc_index = {488, 22}, nox_index = {6, 1}}})
+rows = load_env(20).pollution_rows()
+check("HI/LO cells: whole numbers for ppm, counts and indexes", rows[1].hi == "619" and rows[1].lo == "401" and rows[5].hi == "4058" and rows[5].lo == "58" and rows[6].hi == "488" and rows[7].lo == "1",
+  tostring(rows[1].hi) .. " " .. tostring(rows[5].hi))
+check("HI/LO cells: one decimal under 100 (23.0, 43.5, 9.96 rounds to 10.0), 0.04 and an exact zero are 0, 123.456 is 123",
+  rows[2].hi == "23.0" and rows[2].lo == "0" and rows[3].hi == "43.5" and rows[3].lo == "0" and rows[4].hi == "123" and rows[4].lo == "10.0", rows[4].hi .. " " .. rows[4].lo .. " " .. rows[3].lo)
+ag_status({extremes = {co2_ppm = {12345, 99999}, pm03_per_dl = {1004, 99.96}, pm25_ugm3 = {99.96, 4.3}}}); rows = load_env(20).pollution_rows()
+check("HI/LO cells: 10,000 and up shows as 10k, 99.96 rolls to 100, nothing is longer than four characters",
+  rows[1].hi == "12k" and rows[1].lo == "99k" and rows[5].hi == "1004" and rows[5].lo == "100" and rows[2].hi == "100" and rows[2].lo == "4.3", rows[1].hi .. " " .. rows[5].lo .. " " .. rows[2].hi)
+ag_status({extremes = {co2_ppm = {-5, 1}}}); rows = load_env(20).pollution_rows()
+check("HI/LO cells: a negative value reads 0, a metric the provider left out reads --", rows[1].hi == "0" and rows[2].hi == "--" and rows[2].lo == "--" and rows[7].hi == "--")
+ag_status(); rows = load_env(20).pollution_rows()
+check("a status.json from before the extremes block: every HI/LO cell shows --, never an error", rows[1].hi == "--" and rows[1].lo == "--" and rows[7].lo == "--")
+check("the outdoor rows have no HI/LO cells (blank columns for now)", (function() set_suite(false) local r = load_env(5).pollution_rows() set_suite(true) return r[1].hi == nil and r[1].lo == nil end)())
+ag_status({label = "GREAT"}); E = load_env(20)
+check("the title honors the room the label column leaves: INDOOR // GREAT needs 15 characters (INDOOR alone with 7 or the default 12, the name with 20)",
+  E.pollution_title(7) == "INDOOR" and E.pollution_title(20) == "INDOOR // GREAT" and E.pollution_title() == "INDOOR", E.pollution_title(7) .. "|" .. E.pollution_title(20) .. "|" .. E.pollution_title())
 
 -- ---------------------------------------------------------------- event notices
 ag_status({notices = {"PM SPIKE // 2.5: 99"}})
@@ -188,27 +218,27 @@ set_suite(true)
 ag_status({alert = "OPEN WIN // CO2 1150 PPM", co2 = 1150})
 for _, ph in ipairs({0, 12, 25}) do check("alert on the DATA line at phase " .. ph, load_env(ph).status_lines()[1] == "DATA // OPEN WIN // CO2 1150 PPM") end
 check("with an alert phase 9 is outdoor, 10 and 14 are indoor",
-  load_env(9).pollution_title() == "POLLUTION" and load_env(10).pollution_title() ~= "POLLUTION" and load_env(14).pollution_title() ~= "POLLUTION")
+  load_env(9).pollution_title() == "OUTDOOR" and load_env(10).pollution_title() ~= "OUTDOOR" and load_env(14).pollution_title() ~= "OUTDOOR")
 ag_status({alert = string.rep("X", 40)}); check("alert text clipped to 29 characters", #load_env(0).status_lines()[1] == #"DATA // " + 29)
 
 -- ---------------------------------------------------------------- staleness and states
 ag_status({gen_age = 400, alert = "OPEN WIN // VOC 263"}); E = load_env(20)
-check("stale: AG STALE, outdoor view, outdoor SRC", E.status_lines()[1] == "DATA // AG STALE" and E.pollution_title() == "POLLUTION" and E.status_lines()[2]:match("^SRC // OWM") ~= nil)
+check("stale: AG STALE, outdoor view, outdoor SRC", E.status_lines()[1] == "DATA // AG STALE" and E.pollution_title() == "OUTDOOR" and E.status_lines()[2]:match("^SRC // OWM") ~= nil)
 ag_status({state = "partial"}); check("partial still shows the indoor view", load_env(20).pollution_title() == "INDOOR")
 ag_status({state = "partial", gen_age = 400}); E = load_env(20)
-check("partial and stale: AG STALE, outdoor", E.status_lines()[1] == "DATA // AG STALE" and E.pollution_title() == "POLLUTION")
+check("partial and stale: AG STALE, outdoor", E.status_lines()[1] == "DATA // AG STALE" and E.pollution_title() == "OUTDOOR")
 ag_status({state = "degraded", gen_age = 60}); check("degraded but recent: indoor", load_env(20).pollution_title() == "INDOOR")
 ag_status({state = "degraded", gen_age = 400}); E = load_env(20)
-check("degraded and stale: AG STALE, outdoor", E.status_lines()[1] == "DATA // AG STALE" and E.pollution_title() == "POLLUTION")
+check("degraded and stale: AG STALE, outdoor", E.status_lines()[1] == "DATA // AG STALE" and E.pollution_title() == "OUTDOOR")
 ag_status({state = "disabled", no_gen = true, alert = "OPEN WIN // X"}); E = load_env(20)
-check("disabled: nothing from AirGradient", E.pollution_title() == "POLLUTION" and E.status_lines()[1] == "DATA // NOMINAL")
+check("disabled: nothing from AirGradient", E.pollution_title() == "OUTDOOR" and E.status_lines()[1] == "DATA // NOMINAL")
 ag_status({state = "error", no_gen = true}); check("error: nothing from AirGradient", load_env(20).status_lines()[1] == "DATA // NOMINAL")
 ag_status({no_gen = true}); E = load_env(20)
-check("ok state without generated_at is stale", E.status_lines()[1] == "DATA // AG STALE" and E.pollution_title() == "POLLUTION")
+check("ok state without generated_at is stale", E.status_lines()[1] == "DATA // AG STALE" and E.pollution_title() == "OUTDOOR")
 os.remove(SC .. "/cache/shared/airgradient/indoor/status.json"); E = load_env(20)
-check("no status.json: normal outdoor view", E.pollution_title() == "POLLUTION" and E.status_lines()[1] == "DATA // NOMINAL")
+check("no status.json: normal outdoor view", E.pollution_title() == "OUTDOOR" and E.status_lines()[1] == "DATA // NOMINAL")
 write(SC .. "/cache/shared/airgradient/indoor/status.json", "{not json"); E = load_env(20)
-check("garbage status.json: normal outdoor view, no error", E.pollution_title() == "POLLUTION" and E.status_lines()[1] == "DATA // NOMINAL")
+check("garbage status.json: normal outdoor view, no error", E.pollution_title() == "OUTDOOR" and E.status_lines()[1] == "DATA // NOMINAL")
 ag_status({alert = "OPEN WIN // VOC 263"}); air_files(nil, nil, '{"state":"error"}'); E = load_env(0)
 check("an outdoor air fault outranks the advice", E.status_lines()[1] == "DATA // FAULT - AIR CACHE ERROR", E.status_lines()[1])
 air_files()
@@ -242,27 +272,27 @@ E = load_env(20, {title = "   ", source_tag = "toolongtag"})
 check("blank title falls back to INDOOR; long source_tag clamped to 6", E.pollution_title() == "INDOOR" and E.status_lines()[2] == "SRC // TOOLON CAVE")
 for _, c in ipairs({{39, false}, {40, true}, {59, true}, {0, false}}) do
   check(("cycle 60 / outdoor 40: phase %d is %s"):format(c[1], c[2] and "indoor" or "outdoor"),
-    (load_env(c[1], {cycle_sec = 60, outdoor_sec = 40}, base60).pollution_title() ~= "POLLUTION") == c[2])
+    (load_env(c[1], {cycle_sec = 60, outdoor_sec = 40}, base60).pollution_title() ~= "OUTDOOR") == c[2])
 end
 ag_status({alert = "OPEN WIN // VOC 263"})
 check("alert_outdoor_sec 5: phase 4 outdoor, phase 5 indoor",
-  load_env(4, {alert_outdoor_sec = 5}).pollution_title() == "POLLUTION" and load_env(5, {alert_outdoor_sec = 5}).pollution_title() ~= "POLLUTION")
-check("alert_outdoor_sec 25: phase 14 still outdoor", load_env(14, {outdoor_sec = 15, alert_outdoor_sec = 25}).pollution_title() == "POLLUTION")
+  load_env(4, {alert_outdoor_sec = 5}).pollution_title() == "OUTDOOR" and load_env(5, {alert_outdoor_sec = 5}).pollution_title() ~= "OUTDOOR")
+check("alert_outdoor_sec 25: phase 14 still outdoor", load_env(14, {outdoor_sec = 15, alert_outdoor_sec = 25}).pollution_title() == "OUTDOOR")
 ag_status()
-check("outdoor_sec beyond the cycle is clamped: the indoor phase never comes", load_env(19, {cycle_sec = 20, outdoor_sec = 99}, base60).pollution_title() == "POLLUTION")
+check("outdoor_sec beyond the cycle is clamped: the indoor phase never comes", load_env(19, {cycle_sec = 20, outdoor_sec = 99}, base60).pollution_title() == "OUTDOOR")
 check("outdoor_sec = 0: indoor all the time", load_env(0, {outdoor_sec = 0}).pollution_title() == "INDOOR")
 ag_status({alert = "OPEN WIN // CO2 1150 PPM", co2 = 1150})
 E = load_env(20, {enabled = false})
 check("enabled = false: outdoor view, normal SRC, DATA untouched even with an alert",
-  E.pollution_title() == "POLLUTION" and E.status_lines()[2]:match("^SRC // OWM") ~= nil and E.status_lines()[1] == "DATA // NOMINAL")
+  E.pollution_title() == "OUTDOOR" and E.status_lines()[2]:match("^SRC // OWM") ~= nil and E.status_lines()[1] == "DATA // NOMINAL")
 E = load_env(20, {show_alerts = false})
-check("show_alerts = false: no advice on the DATA line, indoor view still rotates", E.status_lines()[1] == "DATA // NOMINAL" and E.pollution_title() ~= "POLLUTION")
-check("show_alerts = false also drops the shortened outdoor share (phase 14 is outdoor)", load_env(14, {show_alerts = false}).pollution_title() == "POLLUTION")
+check("show_alerts = false: no advice on the DATA line, indoor view still rotates", E.status_lines()[1] == "DATA // NOMINAL" and E.pollution_title() ~= "OUTDOOR")
+check("show_alerts = false also drops the shortened outdoor share (phase 14 is outdoor)", load_env(14, {show_alerts = false}).pollution_title() == "OUTDOOR")
 ag_status({gen_age = 400}); E = load_env(20, {show_stale = false})
-check("show_stale = false: a stale reading is silent", E.status_lines()[1] == "DATA // NOMINAL" and E.pollution_title() == "POLLUTION")
-E = load_env(20, {stale_sec = 600}); check("stale_sec = 600: a 400 s old reading is fresh", E.pollution_title() ~= "POLLUTION" and E.status_lines()[1] == "DATA // NOMINAL")
+check("show_stale = false: a stale reading is silent", E.status_lines()[1] == "DATA // NOMINAL" and E.pollution_title() == "OUTDOOR")
+E = load_env(20, {stale_sec = 600}); check("stale_sec = 600: a 400 s old reading is fresh", E.pollution_title() ~= "OUTDOOR" and E.status_lines()[1] == "DATA // NOMINAL")
 ag_status({gen_age = 60}); E = load_env(20, {stale_sec = 30})
-check("stale_sec = 30: a 60 s old reading is stale", E.status_lines()[1] == "DATA // AG STALE" and E.pollution_title() == "POLLUTION")
+check("stale_sec = 30: a 60 s old reading is stale", E.status_lines()[1] == "DATA // AG STALE" and E.pollution_title() == "OUTDOOR")
 ag_status({co2 = 500}); local clock = base + 20
 os.time = function() return clock end
 E = dofile(ENV_LUA); E.configure({refresh_sec = 1})

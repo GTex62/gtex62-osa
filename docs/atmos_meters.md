@@ -123,21 +123,21 @@ Rotation (clock-driven, no stored state; defaults shown, all adjustable in the k
 - While an alert is visible: 10 s outdoor, 20 s indoor.
 - Outdoor view only if the reading is older than 3 minutes or the provider is disabled or in error.
 
-Indoor table (same seven rows as the outdoor POLLUTION table, with the (V) column and two trend columns; the header reads
-`INDOOR // <LABEL>` when that fits in 12 characters and `INDOOR` alone when it does not, since the name is also on the SRC
-line, `SRC // AG <LABEL>`):
+Indoor table (same seven rows as the outdoor table, with the (V) column, two trend columns and the HI and LO columns; the header
+reads `INDOOR // <LABEL>` when that fits above the label column (7 characters with HI and LO, so in practice `INDOOR` alone)
+and `INDOOR` alone when it does not, since the name is also on the SRC line, `SRC // AG <LABEL>`):
 
 | Row | Label | Value |
 | --- | --- | --- |
-| 1 | CO2 (PPM) | ppm, a whole number (482 shows 482, 1,150 shows 1,150) |
+| 1 | CO2 | ppm, a whole number (482 shows 482, 1,150 shows 1,150) |
 | 2 | PM 2.5 | ug/m3 (humidity-compensated, as Home Assistant shows it) |
 | 3 | PM 10 | ug/m3 |
 | 4 | PM 1 | ug/m3 |
-| 5 | PM 0.3 (/DL) | particles/dL, a whole number (3,389 shows 3,389) |
-| 6 | VOC INDEX | index |
-| 7 | NOX INDEX | index |
+| 5 | PM 0.3 | particles/dL, a whole number (3,389 shows 3,389) |
+| 6 | VOC | index |
+| 7 | NOX | index |
 
-The outdoor POLLUTION rows use the same short names (PM 2.5, OZONE, PM 10, NO2, SO2, CO, NH3).
+The outdoor table (titled OUTDOOR; it was POLLUTION before the HI and LO columns) uses the same short names (PM 2.5, OZONE, PM 10, NO2, SO2, CO, NH3).
 
 **The (V) column** is right-aligned and shows each value as its source reports it, in at most five characters, for
 the outdoor POLLUTION and POLLEN rows as well: two decimals under 100 (`5.27`, `12.34`), one decimal under 1,000
@@ -158,11 +158,19 @@ With `[trend] use_ha_export = true` in the airgradient profile (gtex62-core), th
 running from Home Assistant's history, so `1H` works minutes after a boot. While a number on screen was compared against that
 history the indoor SRC line reads `SRC // AG CAVE | HA`; otherwise it is just `SRC // AG CAVE`.
 
-**Widths** (`theme.env.atmos`): `table_value_w` 50 and two `table_trend_w` 46, taken out of the label column and the SOLAR
-gauge (`solar_meter_w` 108, `solar_value_spread` 36, `meter_value_font_pt` 15, so a four-character UV or RAD such as `10.8`
-or `1043` still sits clear of its bar); `table_value_align` is `"right"` (`"center"` is the old centered look). A theme
-file from before 0.5.1 still draws cleanly (the value column widens to the widest value and the values right-align by
-default), but copy these values into your `osa-theme.lua` to get the intended layout.
+**The HI and LO columns** (after `24H`) show the highest and the lowest reading of the last seven days, the raw readings as the sensor
+reported them (a short VOC spike counts), in at most four characters: one decimal under 100 (`4.3`, `12.3`), a whole number above
+(`488`, `1004`), `10k` from 10,000, `0` for zero (the particle lows are mostly `0`), `--` when the engine does not report them (a gtex62-core before
+the seven-day extremes; the engine fills the week from its own logs and the Home Assistant export at start, see gtex62-core's
+airgradient-provider-design.md). The outdoor view leaves the two columns blank for now.
+
+**Widths** (`theme.env.atmos`): `table_value_w` 50, two `table_trend_w` 46 and two `table_extreme_w` 40, taken out of the label column (72 pixels,
+eight characters at most) and the SOLAR gauge, which is now as narrow as the AQI meter (`solar_meter_w` 68, `solar_value_spread` 22, `meter_value_font_pt` 15; a
+four-character RAD such as `1043` in strong sun reaches a few pixels past the gauge); `table_value_align` is `"right"` (`"center"` is the old
+centered look). The HI and LO columns appear only when the label column keeps at least `table_label_min_w` (70) pixels, so a theme file that still has the
+wider SOLAR meter (`solar_meter_w` 108) draws the table as before, without them; to get them, set `solar_meter_w = 68`, `solar_value_spread = 22`,
+`table_extreme_w = 40` and `table_label_min_w = 70`. A theme file from before 0.5.1 still draws cleanly (the value column widens to the widest value and the
+values right-align by default), but copy these values into your `osa-theme.lua` to get the intended layout.
 
 DATA line: the engine's alert text (29 characters or fewer, e.g. `OPEN WIN // CO2 1150 PPM`)
 replaces `NOMINAL` in both views while an alert is visible; it never replaces an outdoor FAULT,

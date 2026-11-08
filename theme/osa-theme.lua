@@ -812,9 +812,11 @@ theme.env = {
     table_gap = 0,
     table_value_w = 50,
     table_trend_w = 46,           -- width of each trend column (1H, 24H) in the pollution table
+    table_extreme_w = 40,         -- width of each of the HI and LO columns (7-day highest and lowest reading)
+    table_label_min_w = 70,       -- HI and LO are left out if the label column would be narrower than this
     table_value_align = "right", -- "right" lines the unpadded values up on the right; "center" is the old look
     meter_w = 68,
-    solar_meter_w = 108,
+    solar_meter_w = 68,
     meter_gap = 8,
     footer_h = 16,
     footer_gap = 2,
@@ -825,7 +827,7 @@ theme.env = {
 
     owm_aqi_bar_max = 5,
     meter_value_font_pt = 15,
-    solar_value_spread = 36,
+    solar_value_spread = 22,
 
     meter_bar_w = 8,
     meter_bar_gap = 16,

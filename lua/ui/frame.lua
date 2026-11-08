@@ -998,6 +998,15 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
   -- With trend columns (the pollution table: 1H and 24H change) the label column gives up their width.
   local trend_w = trend_cols and (tonumber(cfg.table_trend_w) or 46) or 0
   local trend_span = trend_cols and (2 * (trend_w + header_gap)) or 0
+  -- The HI and LO columns (highest and lowest reading of the last seven days) come after the trend columns, and
+  -- only when the label column keeps at least table_label_min_w pixels: a theme written for the older, wider
+  -- SOLAR meter draws the table as before.
+  local extreme_w = tonumber(cfg.table_extreme_w) or 38
+  local extreme_span = 2 * (extreme_w + header_gap)
+  local label_min_w = tonumber(cfg.table_label_min_w) or 70
+  local extreme_cols = trend_cols and not fixed_label_w
+    and (w - value_w - header_gap - trend_span - extreme_span) >= label_min_w
+  if extreme_cols then trend_span = trend_span + extreme_span end
   local label_w = fixed_label_w or (w - value_w - header_gap - trend_span)
   local bar_w = bar_max and (w - label_w - (header_gap * 2) - value_w) or 0
   local bar_col_w = bar_w > 0 and (bar_w + header_gap) or 0
@@ -1008,12 +1017,22 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
   local value_align_right = tostring(cfg.table_value_align or "right") == "right"
 
   local title_span = bar_w > 0 and (label_w + header_gap + bar_w) or label_w
+  if type(title) == "function" then
+    -- the title is worked out for the room the label column leaves (monospaced header font: 0.6 em per character)
+    title = title(math.floor(title_span / (header_font_pt * 0.6)))
+  end
   draw_split_table_header(cr, x, y, title_span, header_gap, value_w, header_h, title, "(V)", header_font_pt, theme)
   local col1_x = bar_x + bar_col_w + value_w + header_gap
   local col2_x = col1_x + trend_w + header_gap
   if trend_cols then
     draw_table_header(cr, col1_x, y, trend_w, header_h, "1H", header_font_pt, theme)
     draw_table_header(cr, col2_x, y, trend_w, header_h, "24H", header_font_pt, theme)
+  end
+  local col3_x = col2_x + trend_w + header_gap
+  local col4_x = col3_x + extreme_w + header_gap
+  if extreme_cols then
+    draw_table_header(cr, col3_x, y, extreme_w, header_h, "HI", header_font_pt, theme)
+    draw_table_header(cr, col4_x, y, extreme_w, header_h, "LO", header_font_pt, theme)
   end
   draw_rect(cr, x, y + header_h + 1, w, 1, theme.strokes.line, theme.colors.fg)
 
@@ -1046,11 +1065,16 @@ local function draw_env_atmos_table(cr, theme, x, y, w, cfg, title, rows, row_li
       CAIRO_FONT_WEIGHT_NORMAL
     )
     if trend_cols then
-      for _, col in ipairs({ { col1_x, row.t1 }, { col2_x, row.t24 } }) do
+      local cells = { { col1_x, row.t1, trend_w }, { col2_x, row.t24, trend_w } }
+      if extreme_cols then
+        cells[#cells + 1] = { col3_x, row.hi, extreme_w }
+        cells[#cells + 1] = { col4_x, row.lo, extreme_w }
+      end
+      for _, col in ipairs(cells) do
         if col[2] and col[2] ~= "" then
           draw_text_right_digit_mid(
             cr,
-            col[1] + trend_w - 2,
+            col[1] + col[3] - 2,
             mid_y,
             tostring(col[2]),
             theme.fonts.data,
@@ -3307,7 +3331,9 @@ local function draw_env_content(cr, theme, layout, panels, data)
     inner_y,
     center_w,
     table_cfg,
-    type(env_data.pollution_title) == "function" and env_data.pollution_title() or "POLLUTION",
+    function(max_chars)
+      return type(env_data.pollution_title) == "function" and env_data.pollution_title(max_chars) or "OUTDOOR"
+    end,
     type(env_data.pollution_rows) == "function" and env_data.pollution_rows() or {},
     pollution_rows,
     nil,
